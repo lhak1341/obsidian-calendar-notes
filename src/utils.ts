@@ -1,11 +1,9 @@
 import type { Moment } from "moment";
 import { normalizePath, App, Notice, Platform, TFile } from "obsidian";
 
-import type { PeriodicNoteCachedMetadata } from "./cache";
-import { DEFAULT_FORMAT, HUMANIZE_FORMAT } from "./constants";
-import { DEFAULT_PERIODIC_CONFIG } from "./settings";
-import { removeEscapedCharacters } from "./settings/validation";
-import { type CalendarSet, type Granularity, type PeriodicConfig } from "./types";
+import { getFormat } from "./calendarSet";
+import { HUMANIZE_FORMAT } from "./constants";
+import type { CalendarSet, Granularity, PeriodicConfig, PeriodicNoteCachedMetadata } from "./types";
 
 export function isMetaPressed(e: MouseEvent | KeyboardEvent): boolean {
   return Platform.isMacOS ? e.metaKey : e.ctrlKey;
@@ -127,41 +125,6 @@ export function applyTemplateTransformations(
   return templateContents;
 }
 
-export function getFormat(calendarSet: CalendarSet, granularity: Granularity): string {
-  return calendarSet[granularity]?.format || DEFAULT_FORMAT[granularity];
-}
-
-/**
- * When matching file formats, users can specify `YYYY/YYYY-MM-DD`. We should look for
- * paths that match either `YYYY/YYYY-MM-DD` exactly, or just `YYYY-MM-DD` in case
- * users move the file later.
- */
-export function getPossibleFormats(
-  calendarSet: CalendarSet,
-  granularity: Granularity
-): string[] {
-  const format = calendarSet[granularity]?.format;
-  if (!format) return [DEFAULT_FORMAT[granularity]];
-
-  const partialFormatExp = /[^/]*$/.exec(format);
-  if (partialFormatExp) {
-    const partialFormat = partialFormatExp[0];
-    return [format, partialFormat];
-  }
-  return [format];
-}
-
-export function getFolder(calendarSet: CalendarSet, granularity: Granularity): string {
-  return calendarSet[granularity]?.folder || "/";
-}
-
-export function getConfig(
-  calendarSet: CalendarSet,
-  granularity: Granularity
-): PeriodicConfig {
-  return calendarSet[granularity] ?? DEFAULT_PERIODIC_CONFIG;
-}
-
 export async function applyPeriodicTemplateToFile(
   app: App,
   file: TFile,
@@ -274,7 +237,3 @@ export function getRelativeDate(granularity: Granularity, date: Moment) {
   }
 }
 
-export function isIsoFormat(format: string): boolean {
-  const cleanFormat = removeEscapedCharacters(format);
-  return /w{1,2}/.test(cleanFormat);
-}

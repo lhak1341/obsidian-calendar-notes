@@ -2,19 +2,16 @@
   import type { Moment } from "moment";
   import { fly } from "svelte/transition";
 
-  import type {
-    PeriodicNoteCachedMetadata,
-    PeriodicNotesCache,
-  } from "src/cache";
-  import PeriodicNotesPlugin from "src/main";
+  import type { PeriodicNotesCache } from "src/cache";
+  import type { PeriodicNoteCachedMetadata } from "src/types";
   import { MarkdownView } from "obsidian";
   import { get } from "svelte/store";
   import { onMount } from "svelte";
-  import type { Granularity } from "src/types";
+  import type { Granularity, IPeriodicNoteController } from "src/types";
   import { getRelativeDate } from "src/utils";
   import RelativeIcon from "./RelativeIcon.svelte";
 
-  export let plugin: PeriodicNotesPlugin;
+  export let plugin: IPeriodicNoteController;
   export let cache: PeriodicNotesCache;
   export let view: MarkdownView;
 
@@ -54,11 +51,7 @@
     granularity: Granularity,
     date: Moment
   ) {
-    let file = cache.getPeriodicNote(
-      plugin.calendarSetManager.getActiveId(),
-      granularity,
-      date
-    );
+    let file = plugin.getPeriodicNote(granularity, date);
     if (!file) {
       file = await plugin.createPeriodicNote(granularity, date);
     }

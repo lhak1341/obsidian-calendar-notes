@@ -10,22 +10,19 @@ import {
   type CachedMetadata,
 } from "obsidian";
 
+import { getPossibleFormats } from "./calendarSet";
 import { DEFAULT_FORMAT } from "./constants";
-import type PeriodicNotesPlugin from "./main";
 import { getLooselyMatchedDate } from "./parser";
 import { getDateInput } from "./settings/validation";
-import { granularities, type CalendarSet, type Granularity, type PeriodicConfig } from "./types";
-import { applyPeriodicTemplateToFile, getPossibleFormats } from "./utils";
-
-export type MatchType = "filename" | "frontmatter" | "date-prefixed";
-
-export interface PeriodicNoteMatchMatchData {
-  /* where was the date found */
-  matchType: MatchType;
-  /* XXX: keep ZK matches in the cache, should this be separate from formats with HH:mm in them? */
-  /* just collect this for now, not 100% sure how it will be used. */
-  exact: boolean;
-}
+import {
+  granularities,
+  type CalendarSet,
+  type Granularity,
+  type ICalendarSetSource,
+  type PeriodicConfig,
+  type PeriodicNoteCachedMetadata,
+} from "./types";
+import { applyPeriodicTemplateToFile } from "./utils";
 
 function compareGranularity(a: Granularity, b: Granularity) {
   const idxA = granularities.indexOf(a);
@@ -35,17 +32,6 @@ function compareGranularity(a: Granularity, b: Granularity) {
   return 1;
 }
 
-export interface PeriodicNoteCachedMetadata {
-  calendarSet: string;
-  filePath: string;
-  date: Moment;
-  granularity: Granularity;
-  canonicalDateStr: string;
-
-  /* "how" the match was made */
-  matchData: PeriodicNoteMatchMatchData;
-}
-
 function getCanonicalDateString(_granularity: Granularity, date: Moment): string {
   return date.toISOString();
 }
@@ -53,7 +39,7 @@ function getCanonicalDateString(_granularity: Granularity, date: Moment): string
 export class PeriodicNotesCache extends Component {
   public cachedFiles: Map<string, Map<string, PeriodicNoteCachedMetadata>>;
 
-  constructor(readonly app: App, readonly plugin: PeriodicNotesPlugin) {
+  constructor(readonly app: App, readonly source: ICalendarSetSource) {
     super();
     this.cachedFiles = new Map();
 
@@ -92,7 +78,7 @@ export class PeriodicNotesCache extends Component {
   }
 
   public initialize(): void {
-    for (const calendarSet of this.plugin.calendarSetManager.getCalendarSets()) {
+    for (const calendarSet of this.source.getCalendarSets()) {
       const activeGranularities = granularities.filter((g) => calendarSet[g]?.enabled);
       for (const granularity of activeGranularities) {
         const config = calendarSet[granularity] as PeriodicConfig;
@@ -145,8 +131,7 @@ export class PeriodicNotesCache extends Component {
     _data: string,
     cache: CachedMetadata
   ): void {
-    const manager = this.plugin.calendarSetManager;
-    for (const calendarSet of manager.getCalendarSets()) {
+    for (const calendarSet of this.source.getCalendarSets()) {
       this.resolveChangedMetadataForCalendarSet(file, cache, calendarSet);
     }
   }
@@ -239,8 +224,7 @@ export class PeriodicNotesCache extends Component {
     file: TFile,
     reason: "create" | "rename" | "initialize" = "create"
   ): void {
-    const manager = this.plugin.calendarSetManager;
-    for (const calendarSet of manager.getCalendarSets()) {
+    for (const calendarSet of this.source.getCalendarSets()) {
       this.resolveForCalendarSet(file, calendarSet, reason);
     }
   }
@@ -326,9 +310,7 @@ export class PeriodicNotesCache extends Component {
     }
 
     // Check the active calendar set first
-    const activeCache = this.cachedFiles.get(
-      this.plugin.calendarSetManager.getActiveId()
-    );
+    const activeCache = this.cachedFiles.get(this.source.getActiveId());
     const metadata = activeCache?.get(filePath);
     if (metadata) {
       return metadata;

@@ -1,17 +1,10 @@
 import type { Moment } from "moment";
 import { type NLDatesPlugin, setIcon, App, SuggestModal } from "obsidian";
-import type { MatchType } from "src/cache";
-import type PeriodicNotesPlugin from "src/main";
-import {
-  getFolder,
-  getFormat,
-  getRelativeDate,
-  isIsoFormat,
-  isMetaPressed,
-  join,
-} from "src/utils";
+import { getFolder, getFormat, isIsoFormat } from "src/calendarSet";
+import type { MatchType } from "src/types";
+import { getRelativeDate, isMetaPressed, join } from "src/utils";
 
-import type { Granularity } from "../types";
+import type { Granularity, IPeriodicNoteController } from "../types";
 import { RelatedFilesSwitcher } from "./relatedFilesSwitcher";
 
 export interface DateNavigationItem {
@@ -34,7 +27,7 @@ const DEFAULT_INSTRUCTIONS = [
 export class NLDNavigator extends SuggestModal<DateNavigationItem> {
   private nlDatesPlugin: NLDatesPlugin;
 
-  constructor(readonly app: App, readonly plugin: PeriodicNotesPlugin) {
+  constructor(readonly app: App, readonly plugin: IPeriodicNoteController) {
     super(app);
 
     this.setInstructions(DEFAULT_INSTRUCTIONS);
@@ -75,7 +68,7 @@ export class NLDNavigator extends SuggestModal<DateNavigationItem> {
 
     let label = "";
     if (granularity === "week") {
-      const format = this.plugin.calendarSetManager.getFormat("week");
+      const format = this.plugin.getFormat("week");
       const weekNumber = isIsoFormat(format) ? "WW" : "ww";
       label = date.format(`GGGG [Week] ${weekNumber}`);
     } else if (granularity === "day") {
@@ -118,7 +111,7 @@ export class NLDNavigator extends SuggestModal<DateNavigationItem> {
   }
 
   getDateSuggestions(query: string): DateNavigationItem[] {
-    const activeGranularities = this.plugin.calendarSetManager.getActiveGranularities();
+    const activeGranularities = this.plugin.getActiveGranularities();
     const getSuggestion = (dateStr: string, granularity: Granularity) => {
       const date = this.nlDatesPlugin.parseDate(dateStr);
       return {
@@ -199,7 +192,7 @@ export class NLDNavigator extends SuggestModal<DateNavigationItem> {
     const periodicNote = this.plugin.getPeriodicNote(value.granularity, value.date);
 
     if (!periodicNote) {
-      const calendarSet = this.plugin.calendarSetManager.getActiveSet();
+      const calendarSet = this.plugin.getActiveSet();
       const format = getFormat(calendarSet, value.granularity);
       const folder = getFolder(calendarSet, value.granularity);
       el.setText(value.label);

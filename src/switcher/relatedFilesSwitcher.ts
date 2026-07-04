@@ -1,6 +1,6 @@
 import { setIcon, App, SuggestModal, TFile } from "obsidian";
 import { DEFAULT_FORMAT } from "src/constants";
-import type PeriodicNotesPlugin from "src/main";
+import type { IPeriodicNoteController } from "src/types";
 
 import { NLDNavigator, type DateNavigationItem } from "./switcher";
 
@@ -17,7 +17,7 @@ export class RelatedFilesSwitcher extends SuggestModal<DateNavigationItem> {
 
   constructor(
     readonly app: App,
-    readonly plugin: PeriodicNotesPlugin,
+    readonly plugin: IPeriodicNoteController,
     readonly selectedItem: DateNavigationItem,
     readonly oldQuery: string
   ) {

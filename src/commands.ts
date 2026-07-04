@@ -1,7 +1,6 @@
 import { type Command, App, TFile, Notice } from "obsidian";
-import type PeriodicNotesPlugin from "src/main";
 
-import type { Granularity } from "./types";
+import type { Granularity, IPeriodicNoteController } from "./types";
 
 interface IDisplayConfig {
   periodicity: string;
@@ -39,7 +38,7 @@ export const displayConfigs: Record<Granularity, IDisplayConfig> = {
 
 async function jumpToAdjacentNote(
   app: App,
-  plugin: PeriodicNotesPlugin,
+  plugin: IPeriodicNoteController,
   direction: "forwards" | "backwards"
 ): Promise<void> {
   const activeFile = app.workspace.getActiveFile();
@@ -71,7 +70,7 @@ async function jumpToAdjacentNote(
 
 async function openAdjacentNote(
   app: App,
-  plugin: PeriodicNotesPlugin,
+  plugin: IPeriodicNoteController,
   direction: "forwards" | "backwards"
 ): Promise<void> {
   const activeFile = app.workspace.getActiveFile();
@@ -89,7 +88,7 @@ async function openAdjacentNote(
 
 export function getCommands(
   app: App,
-  plugin: PeriodicNotesPlugin,
+  plugin: IPeriodicNoteController,
   granularity: Granularity
 ): Command[] {
   const config = displayConfigs[granularity];

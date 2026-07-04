@@ -1,15 +1,15 @@
 import { App, Menu, Modal, type Point } from "obsidian";
-import type PeriodicNotesPlugin from "src/main";
 
 import { displayConfigs } from "./commands";
+import type { IPeriodicNoteController } from "./types";
 
 export function showFileMenu(
-  plugin: PeriodicNotesPlugin,
+  plugin: IPeriodicNoteController,
   position: Point
 ): void {
   const contextMenu = new Menu();
 
-  plugin.calendarSetManager.getActiveGranularities().forEach((granularity) => {
+  plugin.getActiveGranularities().forEach((granularity) => {
     const config = displayConfigs[granularity];
     contextMenu.addItem((item) =>
       item
@@ -24,15 +24,15 @@ export function showFileMenu(
   contextMenu.showAtPosition(position);
 }
 export class PeriodicNoteCreateModal extends Modal {
-  constructor(app: App, readonly plugin: PeriodicNotesPlugin) {
+  constructor(app: App, readonly plugin: IPeriodicNoteController) {
     super(app);
 
     this.contentEl.addClass("periodic-modal");
     this.contentEl.createEl("h2", { text: "Open periodic note" });
 
-    plugin.calendarSetManager.getActiveGranularities().forEach((granularity) => {
+    plugin.getActiveGranularities().forEach((granularity) => {
       const displayConfig = displayConfigs[granularity];
-      const config = plugin.calendarSetManager.getActiveConfig(granularity);
+      const config = plugin.getActiveConfig(granularity);
 
       const noteExists = plugin.getPeriodicNote(granularity, window.moment());
       const template = config.templatePath;

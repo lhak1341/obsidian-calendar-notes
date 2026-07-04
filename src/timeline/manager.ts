@@ -1,6 +1,6 @@
-import { MarkdownView } from "obsidian";
+import { App, Component, MarkdownView } from "obsidian";
 import { PeriodicNotesCache } from "src/cache";
-import PeriodicNotesPlugin from "src/main";
+import type { IPeriodicNoteController } from "src/types";
 import { mount, unmount } from "svelte";
 
 import Timeline from "./Timeline.svelte";
@@ -9,10 +9,15 @@ export default class TimelineManager {
   // Maps each view's containerEl → its mounted Timeline instance
   private timelines = new Map<HTMLElement, ReturnType<typeof mount>>();
 
-  constructor(readonly plugin: PeriodicNotesPlugin, readonly cache: PeriodicNotesCache) {
-    this.plugin.app.workspace.onLayoutReady(() => {
-      plugin.registerEvent(
-        plugin.app.workspace.on("layout-change", this.onLayoutChange, this)
+  constructor(
+    readonly app: App,
+    readonly component: Component,
+    readonly cache: PeriodicNotesCache,
+    readonly plugin: IPeriodicNoteController
+  ) {
+    this.app.workspace.onLayoutReady(() => {
+      component.registerEvent(
+        this.app.workspace.on("layout-change", this.onLayoutChange, this)
       );
       this.onLayoutChange();
     });
@@ -27,7 +32,7 @@ export default class TimelineManager {
 
   private onLayoutChange(): void {
     const openViews = new Map<HTMLElement, MarkdownView>();
-    this.plugin.app.workspace.iterateAllLeaves((leaf) => {
+    this.app.workspace.iterateAllLeaves((leaf) => {
       if (leaf.view instanceof MarkdownView) {
         openViews.set(leaf.view.containerEl, leaf.view);
       }

@@ -2,14 +2,14 @@ import type { Moment } from "moment";
 import { addIcon, Plugin, TFile } from "obsidian";
 import { get, writable, type Writable } from "svelte/store";
 
-import { PeriodicNotesCache, type PeriodicNoteCachedMetadata } from "./cache";
+import { PeriodicNotesCache } from "./cache";
 import CalendarSetManager, {
-  DEFAULT_CALENDARSET_ID,
   isLegacySettings,
   migrateDailyNoteSettings,
   migrateLegacySettingsToCalendarSet,
 } from "./calendarSetManager";
 import { displayConfigs, getCommands } from "./commands";
+import { DEFAULT_CALENDARSET_ID } from "./constants";
 import {
   calendarDayIcon,
   calendarMonthIcon,
@@ -34,18 +34,13 @@ import {
 import { CalendarSetSuggestModal } from "./switcher/calendarSetSwitcher";
 import { NLDNavigator } from "./switcher/switcher";
 import TimelineManager from "./timeline/manager";
-import type { Granularity, PeriodicConfig } from "./types";
+import { granularities, type CalendarSet, type Granularity, type IOpenOpts, type IPeriodicNoteController, type PeriodicConfig, type PeriodicNoteCachedMetadata } from "./types";
 import {
   applyTemplateTransformations,
   getNoteCreationPath,
   getTemplateContents,
   isMetaPressed,
 } from "./utils";
-
-interface IOpenOpts {
-  inNewSplit?: boolean;
-  calendarSet?: string;
-}
 
 // obsidian-daily-notes-interface reads plugin.settings.daily/weekly/etc. as plain objects.
 // Extend Writable with those legacy keys so the type system accepts the compat shim.
@@ -58,7 +53,7 @@ type SettingsStore = Writable<ISettings> & {
   yearly?: LegacyConfig;
 };
 
-export default class PeriodicNotesPlugin extends Plugin {
+export default class PeriodicNotesPlugin extends Plugin implements IPeriodicNoteController {
   public settings!: SettingsStore;
   private ribbonEl: HTMLElement | null = null;
 
@@ -88,9 +83,9 @@ export default class PeriodicNotesPlugin extends Plugin {
     initializeLocaleConfigOnce(this.app);
 
     this.ribbonEl = null;
-    this.calendarSetManager = new CalendarSetManager(this);
-    this.cache = new PeriodicNotesCache(this.app, this);
-    this.timelineManager = new TimelineManager(this, this.cache);
+    this.calendarSetManager = new CalendarSetManager(this.settings);
+    this.cache = new PeriodicNotesCache(this.app, this.calendarSetManager);
+    this.timelineManager = new TimelineManager(this.app, this, this.cache, this);
 
     this.openPeriodicNote = this.openPeriodicNote.bind(this);
     this.settingsTab = new PeriodicNotesSettingsTab(this.app, this);
@@ -186,8 +181,9 @@ export default class PeriodicNotesPlugin extends Plugin {
 
   private configureCommands() {
     // Remove disabled commands
-    this.calendarSetManager
-      .getInactiveGranularities()
+    const activeSet = this.calendarSetManager.getActiveSet();
+    granularities
+      .filter((granularity) => !activeSet[granularity]?.enabled)
       .forEach((granularity: Granularity) => {
         getCommands(this.app, this, granularity).forEach((command) =>
           this.app.commands.removeCommand(`periodic-notes:${command.id}`)
@@ -319,5 +315,33 @@ export default class PeriodicNotesPlugin extends Plugin {
 
     const leaf = inNewSplit ? workspace.getLeaf("split") : workspace.getLeaf(false);
     await leaf.openFile(file, { active: true });
+  }
+
+  public getActiveId(): string {
+    return this.calendarSetManager.getActiveId();
+  }
+
+  public getActiveGranularities(): Granularity[] {
+    return this.calendarSetManager.getActiveGranularities();
+  }
+
+  public getActiveConfig(granularity: Granularity): PeriodicConfig {
+    return this.calendarSetManager.getActiveConfig(granularity);
+  }
+
+  public getActiveSet(): CalendarSet {
+    return this.calendarSetManager.getActiveSet();
+  }
+
+  public getCalendarSets(): CalendarSet[] {
+    return this.calendarSetManager.getCalendarSets();
+  }
+
+  public getFormat(granularity: Granularity): string {
+    return this.calendarSetManager.getFormat(granularity);
+  }
+
+  public setActiveSet(id: string): void {
+    this.calendarSetManager.setActiveSet(id);
   }
 }

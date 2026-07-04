@@ -1,10 +1,8 @@
 import { App, type FuzzyMatch, FuzzySuggestModal } from "obsidian";
-import PeriodicNotesPlugin from "src/main";
-import { setActiveSet } from "src/settings/utils";
-import type { CalendarSet } from "src/types";
+import type { CalendarSet, IPeriodicNoteController } from "src/types";
 
 export class CalendarSetSuggestModal extends FuzzySuggestModal<CalendarSet> {
-  constructor(app: App, readonly plugin: PeriodicNotesPlugin) {
+  constructor(app: App, readonly plugin: IPeriodicNoteController) {
     super(app);
   }
 
@@ -13,7 +11,7 @@ export class CalendarSetSuggestModal extends FuzzySuggestModal<CalendarSet> {
   }
 
   getItems(): CalendarSet[] {
-    return this.plugin.calendarSetManager.getCalendarSets();
+    return this.plugin.getCalendarSets();
   }
 
   renderSuggestion(calendarSet: FuzzyMatch<CalendarSet>, el: HTMLElement) {
@@ -21,6 +19,6 @@ export class CalendarSetSuggestModal extends FuzzySuggestModal<CalendarSet> {
   }
 
   async onChooseItem(item: CalendarSet, _evt: MouseEvent | KeyboardEvent): Promise<void> {
-    this.plugin.settings.update(setActiveSet(item.id));
+    this.plugin.setActiveSet(item.id);
   }
 }
