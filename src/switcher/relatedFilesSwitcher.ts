@@ -94,8 +94,8 @@ export class RelatedFilesSwitcher extends SuggestModal<DateNavigationItem> {
     if (file && file instanceof TFile) {
       const inNewSplit = evt.shiftKey;
       const leaf = inNewSplit
-        ? this.app.workspace.splitActiveLeaf()
-        : this.app.workspace.getUnpinnedLeaf();
+        ? this.app.workspace.getLeaf("split")
+        : this.app.workspace.getLeaf(false);
       await leaf.openFile(file, { active: true });
     }
   }

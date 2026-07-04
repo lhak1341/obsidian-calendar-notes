@@ -217,7 +217,7 @@ export async function applyPeriodicTemplateToFile(
     format,
     templateContents
   );
-  return app.vault.modify(file, renderedContents);
+  return app.vault.process(file, () => renderedContents);
 }
 
 export async function getTemplateContents(

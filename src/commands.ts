@@ -56,7 +56,7 @@ async function jumpToAdjacentNote(
   if (adjacentNoteMeta) {
     const file = app.vault.getAbstractFileByPath(adjacentNoteMeta.filePath);
     if (file && file instanceof TFile) {
-      const leaf = app.workspace.getUnpinnedLeaf();
+      const leaf = app.workspace.getLeaf(false);
       await leaf.openFile(file, { active: true });
     }
   } else {

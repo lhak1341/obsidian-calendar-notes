@@ -72,7 +72,6 @@
         <input
           type="checkbox"
           bind:checked={$config.enabled}
-          style="display: none;"
         />
       </label>
     </div>
@@ -126,5 +125,9 @@
 
   .periodic-group-content {
     padding: 24px;
+  }
+
+  .checkbox-container input[type="checkbox"] {
+    display: none;
   }
 </style>
