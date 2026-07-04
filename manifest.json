@@ -1,10 +1,10 @@
 {
-  "id": "periodic-notes",
-  "name": "Periodic Notes",
-  "description": "Create/manage your daily, weekly, and monthly notes",
+  "id": "obsidian-calendar-notes",
+  "name": "Calendar Notes",
+  "description": "Calendar view and periodic notes in one plugin",
   "version": "0.0.17",
-  "author": "Liam Cain",
-  "authorUrl": "https://github.com/liamcain/",
+  "author": "lhak1341",
+  "authorUrl": "https://github.com/lhak1341/",
   "isDesktopOnly": false,
   "minAppVersion": "1.13.0",
   "fundingUrl": "https://github.com/sponsors/lhak1341"

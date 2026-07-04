@@ -1,8 +1,8 @@
 {
-  "name": "obsidian-periodic-notes",
+  "name": "obsidian-calendar-notes",
   "version": "0.0.17",
-  "description": "Create/manage daily, weekly, and monthly notes",
-  "author": "liamcain",
+  "description": "Calendar view and periodic notes in one plugin",
+  "author": "lhak1341",
   "main": "main.js",
   "license": "MIT",
   "scripts": {
