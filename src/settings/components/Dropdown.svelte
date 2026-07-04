@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Writable } from "svelte/store";
-  import type { ISettings } from "src/settings";
+  import type { ISettings } from "src/types";
 
   interface IOption {
     label: string;

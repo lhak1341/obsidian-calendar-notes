@@ -1,5 +1,5 @@
 import "obsidian";
-import type { ILocaleOverride, IWeekStartOption } from "./settings";
+import type { ILocaleOverride, IWeekStartOption } from "./settings/localization";
 
 declare module "obsidian" {
   interface IWeeklyNoteOptions {

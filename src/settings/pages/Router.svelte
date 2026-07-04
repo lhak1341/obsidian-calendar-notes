@@ -9,7 +9,7 @@
   import Details from "./details/Details.svelte";
   import { onDestroy, onMount } from "svelte";
   import { get, writable, type Writable } from "svelte/store";
-  import type { ISettings } from "..";
+  import type { ISettings } from "src/types";
   import {
     getLocalizationSettings,
     type ILocalizationSettings,

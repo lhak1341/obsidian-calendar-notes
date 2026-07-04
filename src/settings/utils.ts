@@ -8,7 +8,9 @@ import {
 } from "src/types";
 import { get, type Updater, type Writable } from "svelte/store";
 
-import { DEFAULT_PERIODIC_CONFIG, type ISettings } from ".";
+import type { ISettings } from "src/types";
+
+import { DEFAULT_PERIODIC_CONFIG } from "./defaults";
 
 const defaultPeriodicSettings = granularities.reduce((acc, g) => {
   acc[g] = { ...DEFAULT_PERIODIC_CONFIG };

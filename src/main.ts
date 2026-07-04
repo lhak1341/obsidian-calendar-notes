@@ -32,7 +32,7 @@ import {
   setActiveSet,
 } from "./settings/utils";
 import { CalendarSetSuggestModal } from "./switcher/calendarSetSwitcher";
-import { NLDNavigator } from "./switcher/switcher";
+import { NLDNavigator } from "./switcher/navigator";
 import TimelineManager from "./timeline/manager";
 import { granularities, type CalendarSet, type Granularity, type IOpenOpts, type IPeriodicNoteController, type PeriodicConfig, type PeriodicNoteCachedMetadata } from "./types";
 import {

@@ -10,7 +10,7 @@
   import { displayConfigs } from "src/commands";
   import CalendarSetManager from "src/calendarSetManager";
   import { router } from "src/settings/stores";
-  import type { ISettings } from "src/settings";
+  import type { ISettings } from "src/types";
   import {
     createNewCalendarSet,
     deleteCalendarSet,

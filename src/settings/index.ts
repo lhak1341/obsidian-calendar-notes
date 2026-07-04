@@ -1,34 +1,11 @@
 import { App, PluginSettingTab, type SettingDefinitionItem } from "obsidian";
-import { DEFAULT_CALENDARSET_ID } from "src/constants";
-import type { ISettings, PeriodicConfig } from "src/types";
 import { mount, unmount } from "svelte";
 
 import type WeeklyNotesPlugin from "../main";
 import SettingsRouter from "./pages/Router.svelte";
 
 export type { ISettings } from "src/types";
-
-export const DEFAULT_SETTINGS: ISettings = {
-  // Onboarding
-  installedVersion: "1.0.0-beta3",
-  showGettingStartedBanner: true,
-  hasMigratedDailyNoteSettings: false,
-  hasMigratedWeeklyNoteSettings: false,
-
-  // Configuration / Preferences
-  activeCalendarSet: DEFAULT_CALENDARSET_ID,
-  calendarSets: [],
-  enableTimelineComplication: true,
-};
-
-export const DEFAULT_PERIODIC_CONFIG: PeriodicConfig = Object.freeze({
-  enabled: false,
-  openAtStartup: false,
-
-  format: "",
-  templatePath: "",
-  folder: "",
-});
+export { DEFAULT_SETTINGS, DEFAULT_PERIODIC_CONFIG } from "./defaults";
 
 export class PeriodicNotesSettingsTab extends PluginSettingTab {
   private view: ReturnType<typeof mount> | null = null;

@@ -17,12 +17,10 @@
     "t": ""
   },
   "dependencies": {
-    "@popperjs/core": "2.11.8",
     "lodash": "4.18.1",
     "obsidian": "1.13.1",
     "svelte": "5.56.4",
-    "svelte-writable-derived": "3.1.1",
-    "tslib": "2.8.1"
+    "svelte-writable-derived": "3.1.1"
   },
   "devDependencies": {
     "@tsconfig/svelte": "5.0.8",

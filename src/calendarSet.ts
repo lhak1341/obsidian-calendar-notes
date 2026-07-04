@@ -1,5 +1,5 @@
 import { DEFAULT_FORMAT } from "./constants";
-import { DEFAULT_PERIODIC_CONFIG } from "./settings";
+import { DEFAULT_PERIODIC_CONFIG } from "./settings/defaults";
 import { removeEscapedCharacters } from "./settings/validation";
 import type { CalendarSet, Granularity, PeriodicConfig } from "./types";
 

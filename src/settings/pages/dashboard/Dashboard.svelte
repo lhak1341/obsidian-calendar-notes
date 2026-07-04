@@ -5,7 +5,7 @@
 
   import CalendarSetManager from "src/calendarSetManager";
   import { router } from "src/settings/stores";
-  import type { ISettings } from "src/settings/index";
+  import type { ISettings } from "src/types";
   import Dropdown from "src/settings/components/Dropdown.svelte";
   import Footer from "src/settings/components/Footer.svelte";
   import SettingItem from "src/settings/components/SettingItem.svelte";

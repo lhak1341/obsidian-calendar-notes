@@ -2,7 +2,7 @@
   import type { App } from "obsidian";
   import { Menu, setIcon } from "obsidian";
   import type CalendarSetManager from "src/calendarSetManager";
-  import type { ISettings } from "src/settings";
+  import type { ISettings } from "src/types";
   import { router } from "src/settings/stores";
   import {
     createNewCalendarSet,
