@@ -8,7 +8,7 @@
   import Dashboard from "./dashboard/Dashboard.svelte";
   import Details from "./details/Details.svelte";
   import { onDestroy, onMount } from "svelte";
-  import { writable, type Writable } from "svelte/store";
+  import { get, writable, type Writable } from "svelte/store";
   import type { ISettings } from "..";
   import {
     getLocalizationSettings,
@@ -20,6 +20,10 @@
   export let settings: Writable<ISettings>;
 
   let localization = writable(getLocalizationSettings(app));
+
+  onMount(() => {
+    router.navigate(["Periodic Notes", get(settings).activeCalendarSet]);
+  });
 
   onDestroy(() => {
     router.reset();

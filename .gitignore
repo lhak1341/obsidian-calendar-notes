@@ -17,3 +17,6 @@ dist/
 styles.css
 data.json
 main.js
+
+.claude/
+temp/

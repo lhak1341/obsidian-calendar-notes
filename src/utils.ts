@@ -289,9 +289,9 @@ async function ensureFolderExists(app: App, path: string): Promise<void> {
   const dirs = path.replace(/\\/g, "/").split("/");
   dirs.pop(); // remove basename
 
-  if (dirs.length) {
-    const dir = join(...dirs);
-    if (!app.vault.getAbstractFileByPath(dir)) {
+  for (let i = 1; i <= dirs.length; i++) {
+    const dir = join(...dirs.slice(0, i));
+    if (dir && !app.vault.getAbstractFileByPath(dir)) {
       await app.vault.createFolder(dir);
     }
   }

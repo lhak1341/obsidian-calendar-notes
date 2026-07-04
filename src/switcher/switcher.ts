@@ -204,7 +204,7 @@ export class NLDNavigator extends SuggestModal<DateNavigationItem> {
       const folder = getFolder(calendarSet, value.granularity);
       el.setText(value.label);
       el.createEl("span", { cls: "suggestion-flair", prepend: true }, (el) => {
-        setIcon(el, "add-note-glyph", 16);
+        setIcon(el, "add-note-glyph");
       });
       if (numRelatedNotes > 0) {
         el.createEl("span", { cls: "suggestion-badge", text: `+${numRelatedNotes}` });
@@ -222,7 +222,7 @@ export class NLDNavigator extends SuggestModal<DateNavigationItem> {
     el.setText(value.label);
     el.createEl("div", { cls: "suggestion-note", text: filePath });
     el.createEl("span", { cls: "suggestion-flair", prepend: true }, (el) => {
-      setIcon(el, `calendar-${value.granularity}`, 16);
+      setIcon(el, `calendar-${value.granularity}`);
     });
     if (numRelatedNotes > 0) {
       el.createEl("span", { cls: "suggestion-badge", text: `+${numRelatedNotes}` });

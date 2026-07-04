@@ -1,4 +1,4 @@
-<script type="ts">
+<script lang="ts">
   import type { App } from "obsidian";
   import {
     disableDailyNotesPlugin,
@@ -19,7 +19,7 @@
   }
 </script>
 
-<div out:slide|local class="settings-banner">
+<div out:slide class="settings-banner">
   <h3>Getting Started</h3>
 
   {#if hasDailyNotesEnabled}

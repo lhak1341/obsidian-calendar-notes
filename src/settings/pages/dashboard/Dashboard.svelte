@@ -44,7 +44,7 @@
   }
 
   onMount(() => {
-    setIcon(addEl, "plus", 16);
+    setIcon(addEl, "plus");
   });
 </script>
 
@@ -64,7 +64,6 @@
 <div class="calendarset-container">
   {#each $settings.calendarSets as calendarSet}
     <CalendarSetMenuItem
-      {app}
       {calendarSet}
       {manager}
       {settings}
@@ -104,8 +103,8 @@
     options={getWeekStartOptions()}
     value={$localization.weekStart}
     onChange={(e) => {
-      const val = e.target.value;
-      $localization.weekStart = val;
+      const val = (e.target as HTMLSelectElement).value;
+      $localization.weekStart = val as ILocalizationSettings["weekStart"];
       app.vault.setConfig("weekStart", val);
     }}
   />
@@ -122,9 +121,9 @@
     options={getLocaleOptions()}
     value={$localization.localeOverride}
     onChange={(e) => {
-      const val = e.target.value;
+      const val = (e.target as HTMLSelectElement).value;
       $localization.localeOverride = val;
-      app.vault.setConfig("weekStart", val);
+      app.vault.setConfig("localeOverride", val);
     }}
   />
 </SettingItem>

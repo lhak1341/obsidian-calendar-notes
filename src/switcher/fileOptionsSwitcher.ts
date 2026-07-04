@@ -1,4 +1,4 @@
-import { App, type NLDatesPlugin, Scope, SuggestModal, TFile } from "obsidian";
+import { App, type NLDatesPlugin, SuggestModal, TFile } from "obsidian";
 
 interface FileCommandItem {
   label: string;
@@ -18,9 +18,8 @@ interface FileOptionsItem {
 export class FileOptionsSwitcher extends SuggestModal<FileOptionsItem> {
   nlDatesPlugin: NLDatesPlugin;
 
-  granularityLabel: HTMLElement;
-  dailyNotes: Record<string, TFile>;
-  scope: Scope;
+  granularityLabel!: HTMLElement;
+  dailyNotes!: Record<string, TFile>;
 
   constructor(app: App) {
     super(app);

@@ -1,6 +1,6 @@
 import type { Moment } from "moment";
 import { addIcon, Plugin, TFile } from "obsidian";
-import { writable, type Writable } from "svelte/store";
+import { get, writable, type Writable } from "svelte/store";
 
 import { PeriodicNotesCache, type PeriodicNoteCachedMetadata } from "./cache";
 import CalendarSetManager, {
@@ -37,7 +37,7 @@ import {
 import { CalendarSetSuggestModal } from "./switcher/calendarSetSwitcher";
 import { NLDNavigator } from "./switcher/switcher";
 import TimelineManager from "./timeline/manager";
-import type { Granularity } from "./types";
+import type { Granularity, PeriodicConfig } from "./types";
 import {
   applyTemplateTransformations,
   getNoteCreationPath,
@@ -50,15 +50,28 @@ interface IOpenOpts {
   calendarSet?: string;
 }
 
-export default class PeriodicNotesPlugin extends Plugin {
-  public settings: Writable<ISettings>;
-  private ribbonEl: HTMLElement | null;
+// obsidian-daily-notes-interface reads plugin.settings.daily/weekly/etc. as plain objects.
+// Extend Writable with those legacy keys so the type system accepts the compat shim.
+type LegacyConfig = PeriodicConfig & { template?: string };
+type SettingsStore = Writable<ISettings> & {
+  daily?: LegacyConfig;
+  weekly?: LegacyConfig;
+  monthly?: LegacyConfig;
+  quarterly?: LegacyConfig;
+  yearly?: LegacyConfig;
+};
 
-  private cache: PeriodicNotesCache;
-  public calendarSetManager: CalendarSetManager;
-  private timelineManager: TimelineManager;
+export default class PeriodicNotesPlugin extends Plugin {
+  public settings!: SettingsStore;
+  private ribbonEl: HTMLElement | null = null;
+
+  private cache!: PeriodicNotesCache;
+  public calendarSetManager!: CalendarSetManager;
+  private timelineManager!: TimelineManager;
+  private settingsTab!: PeriodicNotesSettingsTab;
 
   unload(): void {
+    this.settingsTab?.hide();
     super.unload();
     this.timelineManager?.cleanup();
   }
@@ -70,7 +83,8 @@ export default class PeriodicNotesPlugin extends Plugin {
     addIcon("calendar-quarter", calendarQuarterIcon);
     addIcon("calendar-year", calendarYearIcon);
 
-    this.settings = writable<ISettings>();
+    this.settings = writable<ISettings>() as SettingsStore;
+    this.addLegacySettingsCompat();
     await this.loadSettings();
     this.register(this.settings.subscribe(this.onUpdateSettings.bind(this)));
 
@@ -82,7 +96,8 @@ export default class PeriodicNotesPlugin extends Plugin {
     this.timelineManager = new TimelineManager(this, this.cache);
 
     this.openPeriodicNote = this.openPeriodicNote.bind(this);
-    this.addSettingTab(new PeriodicNotesSettingsTab(this.app, this));
+    this.settingsTab = new PeriodicNotesSettingsTab(this.app, this);
+    this.addSettingTab(this.settingsTab);
     
     this.configureRibbonIcons();
     this.configureCommands();
@@ -121,6 +136,31 @@ export default class PeriodicNotesPlugin extends Plugin {
     });
   }
 
+  private addLegacySettingsCompat(): void {
+    // obsidian-daily-notes-interface reads plugin.settings.daily/weekly/monthly/quarterly/yearly
+    // as plain objects. Our settings use CalendarSet keys (day/week/month/quarter/year) so we
+    // add getters that map from the legacy names to the active calendar set's config.
+    const keyMap: Array<[string, Granularity]> = [
+      ["daily", "day"],
+      ["weekly", "week"],
+      ["monthly", "month"],
+      ["quarterly", "quarter"],
+      ["yearly", "year"],
+    ];
+    for (const [legacyKey, granularity] of keyMap) {
+      Object.defineProperty(this.settings, legacyKey, {
+        get: (): LegacyConfig | undefined => {
+          const s = get(this.settings);
+          const activeSet = s?.calendarSets?.find((cs) => cs.id === s.activeCalendarSet);
+          const config = activeSet?.[granularity];
+          return config ? { ...config, template: config.templatePath } : undefined;
+        },
+        enumerable: false,
+        configurable: true,
+      });
+    }
+  }
+
   private configureRibbonIcons() {
     this.ribbonEl?.detach();
 
@@ -139,7 +179,7 @@ export default class PeriodicNotesPlugin extends Plugin {
           }
         }
       );
-      this.ribbonEl.addEventListener("contextmenu", (e: MouseEvent) => {
+      this.registerDomEvent(this.ribbonEl, "contextmenu", (e: MouseEvent) => {
         e.preventDefault();
         showFileMenu(this.app, this, {
           x: e.pageX,
@@ -181,7 +221,7 @@ export default class PeriodicNotesPlugin extends Plugin {
             migrateLegacySettingsToCalendarSet(settings)
           )
         );
-      } else if (hasLegacyDailyNoteSettings(app)) {
+      } else if (hasLegacyDailyNoteSettings(this.app)) {
         this.settings.update(
           createNewCalendarSet(DEFAULT_CALENDARSET_ID, migrateDailyNoteSettings(settings))
         );
@@ -282,7 +322,7 @@ export default class PeriodicNotesPlugin extends Plugin {
       file = await this.createPeriodicNote(granularity, date);
     }
 
-    const leaf = inNewSplit ? workspace.splitActiveLeaf() : workspace.getUnpinnedLeaf();
+    const leaf = inNewSplit ? workspace.getLeaf("split") : workspace.getLeaf(false);
     await leaf.openFile(file, { active: true });
   }
 }

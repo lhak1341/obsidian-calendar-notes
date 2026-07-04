@@ -1,16 +1,15 @@
 import { MarkdownView } from "obsidian";
 import { PeriodicNotesCache } from "src/cache";
 import PeriodicNotesPlugin from "src/main";
-import type { SvelteComponent } from "svelte";
+import { mount, unmount } from "svelte";
 
 import Timeline from "./Timeline.svelte";
 
 export default class TimelineManager {
-  private btnComponents: SvelteComponent[];
+  // Maps each view's containerEl → its mounted Timeline instance
+  private timelines = new Map<HTMLElement, ReturnType<typeof mount>>();
 
   constructor(readonly plugin: PeriodicNotesPlugin, readonly cache: PeriodicNotesCache) {
-    this.btnComponents = [];
-
     this.plugin.app.workspace.onLayoutReady(() => {
       plugin.registerEvent(
         plugin.app.workspace.on("layout-change", this.onLayoutChange, this)
@@ -20,42 +19,36 @@ export default class TimelineManager {
   }
 
   public cleanup() {
-    for (const existingEl of this.btnComponents) {
-      existingEl.$destroy();
+    for (const instance of this.timelines.values()) {
+      unmount(instance);
     }
+    this.timelines.clear();
   }
 
   private onLayoutChange(): void {
-    const openViews: MarkdownView[] = [];
+    const openViews = new Map<HTMLElement, MarkdownView>();
     this.plugin.app.workspace.iterateAllLeaves((leaf) => {
       if (leaf.view instanceof MarkdownView) {
-        openViews.push(leaf.view);
+        openViews.set(leaf.view.containerEl, leaf.view);
       }
     });
 
-    // Clean up timelines on closed leaves
-    for (const existingEl of this.btnComponents) {
-      if (
-        !openViews
-          .map((view) => view.containerEl)
-          .includes(existingEl.$$.root as HTMLElement)
-      ) {
-        existingEl.$destroy();
+    // Remove timelines for closed views
+    for (const [target, instance] of this.timelines) {
+      if (!openViews.has(target)) {
+        unmount(instance);
+        this.timelines.delete(target);
       }
     }
 
-    // Add to any view that doesn't already have one
-    for (const view of openViews) {
-      const btn = this.btnComponents.find((btn) => btn.$$.root === view.containerEl);
-      if (!btn) {
-        this.btnComponents.push(
-          new Timeline({
-            target: view.containerEl,
-            props: {
-              plugin: this.plugin,
-              cache: this.cache,
-              view,
-            },
+    // Add timelines for new views
+    for (const [container, view] of openViews) {
+      if (!this.timelines.has(container)) {
+        this.timelines.set(
+          container,
+          mount(Timeline, {
+            target: container,
+            props: { plugin: this.plugin, cache: this.cache, view },
           })
         );
       }

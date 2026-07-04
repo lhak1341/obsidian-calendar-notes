@@ -9,9 +9,8 @@
     "noImplicitAny": true,
     "strictNullChecks": true,
     "moduleResolution": "node",
-    "importHelpers": true,
-    "importsNotUsedAsValues": "remove",
-    "lib": ["dom", "es5", "scripthost", "es2015"]
+    "ignoreDeprecations": "6.0",
+    "lib": ["dom", "es5", "scripthost", "es2015", "es2016"]
   },
   "include": ["**/*.ts"]
 }

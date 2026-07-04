@@ -8,7 +8,7 @@ export function showFileMenu(
   plugin: PeriodicNotesPlugin,
   position: Point
 ): void {
-  const contextMenu = new Menu(app);
+  const contextMenu = new Menu();
 
   plugin.calendarSetManager.getActiveGranularities().forEach((granularity) => {
     const config = displayConfigs[granularity];

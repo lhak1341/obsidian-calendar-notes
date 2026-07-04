@@ -8,6 +8,7 @@
   } from "src/cache";
   import PeriodicNotesPlugin from "src/main";
   import { MarkdownView } from "obsidian";
+  import { get } from "svelte/store";
   import { onMount } from "svelte";
   import type { Granularity } from "src/types";
   import { getRelativeDate } from "src/utils";
@@ -17,14 +18,14 @@
   export let cache: PeriodicNotesCache;
   export let view: MarkdownView;
 
-  let showTimeline: boolean;
-  let weekDays: Moment[];
+  let showTimeline = false;
+  let weekDays: Moment[] = [];
   let today = window.moment();
-  let periodicData: PeriodicNoteCachedMetadata | null;
-  let relativeDataStr: string;
+  let periodicData: PeriodicNoteCachedMetadata | null = null;
+  let relativeDataStr = "";
 
   let settings = plugin.settings;
-  let showComplication = $settings.enableTimelineComplication;
+  let showComplication = get(settings)?.enableTimelineComplication ?? false;
 
   $: {
     periodicData = cache.find(view.file?.path);

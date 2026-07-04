@@ -21,30 +21,26 @@
   export let settings: Writable<ISettings>;
 
   let displayConfig = displayConfigs[granularity];
-  let isExpanded = false;
+  let isExpanded = true;
 
   let calendarSet = writableDerived(
     settings,
     ($settings) =>
       $settings.calendarSets.find((set) => set.id === calendarSetId)!,
-    {
-      withOld(reflecting, $settings) {
-        const idx = $settings.calendarSets.findIndex(
-          (set) => set.id === calendarSetId
-        );
-        $settings.calendarSets[idx] = reflecting;
-        return $settings;
-      },
+    (reflecting, $settings) => {
+      const idx = $settings.calendarSets.findIndex(
+        (set) => set.id === calendarSetId
+      );
+      $settings.calendarSets[idx] = reflecting;
+      return $settings;
     }
   );
   let config = writableDerived(
     calendarSet,
     ($calendarSet) => $calendarSet?.[granularity] ?? DEFAULT_PERIODIC_CONFIG,
-    {
-      withOld(reflecting, $calendarSet) {
-        $calendarSet[granularity] = reflecting;
-        return $calendarSet;
-      },
+    (reflecting, $calendarSet) => {
+      $calendarSet[granularity] = reflecting;
+      return $calendarSet;
     }
   );
 
@@ -84,8 +80,8 @@
   {#if isExpanded}
     <div
       class="periodic-group-content"
-      in:slide|local={{ duration: 300 }}
-      out:slide|local={{ duration: 300 }}
+      in:slide={{ duration: 300 }}
+      out:slide={{ duration: 300 }}
     >
       <NoteFormatSetting {config} {granularity} />
       <NoteFolderSetting {app} {config} {granularity} />

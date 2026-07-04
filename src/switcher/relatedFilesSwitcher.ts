@@ -12,7 +12,7 @@ const DEFAULT_INSTRUCTIONS = [
 ];
 
 export class RelatedFilesSwitcher extends SuggestModal<DateNavigationItem> {
-  private inputLabel: HTMLElement;
+  private inputLabel!: HTMLElement;
   private includeFinerGranularities: boolean;
 
   constructor(
@@ -85,7 +85,7 @@ export class RelatedFilesSwitcher extends SuggestModal<DateNavigationItem> {
       text: value.date.format(DEFAULT_FORMAT[value.granularity]),
     });
     el.createEl("span", { cls: "suggestion-flair", prepend: true }, (el) => {
-      setIcon(el, `calendar-${value.granularity}`, 16);
+      setIcon(el, `calendar-${value.granularity}`);
     });
   }
 
