@@ -6,17 +6,6 @@ import { mount, unmount } from "svelte";
 import type WeeklyNotesPlugin from "../main";
 import SettingsRouter from "./pages/Router.svelte";
 
-export type ILocaleOverride = "system-default" | string;
-export type IWeekStartOption =
-  | "sunday"
-  | "monday"
-  | "tuesday"
-  | "wednesday"
-  | "thursday"
-  | "friday"
-  | "saturday"
-  | "locale";
-
 export interface ISettings {
   showGettingStartedBanner: boolean;
   hasMigratedDailyNoteSettings: boolean;

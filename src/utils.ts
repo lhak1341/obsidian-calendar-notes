@@ -33,8 +33,36 @@ function getDaysOfWeek(): string[] {
   return daysOfWeek;
 }
 
-export function getDayOfWeekNumericalValue(dayOfWeekName: string): number {
+function getDayOfWeekNumericalValue(dayOfWeekName: string): number {
   return getDaysOfWeek().indexOf(dayOfWeekName.toLowerCase());
+}
+
+function applyPeriodTemplate(
+  contents: string,
+  token: string,
+  date: Moment,
+  format: string
+): string {
+  return contents.replace(
+    new RegExp(`{{\\s*(${token})\\s*(([+-]\\d+)([yqmwdhs]))?\\s*(:.+?)?}}`, "gi"),
+    (_, _tok, calc, timeDelta, unit, momentFormat) => {
+      const now = window.moment();
+      const periodStart = date
+        .clone()
+        .startOf(token as Parameters<Moment["startOf"]>[0])
+        .set({
+          hour: now.get("hour"),
+          minute: now.get("minute"),
+          second: now.get("second"),
+        });
+      if (calc) {
+        periodStart.add(parseInt(timeDelta, 10), unit);
+      }
+      return momentFormat
+        ? periodStart.format(momentFormat.substring(1).trim())
+        : periodStart.format(format);
+    }
+  );
 }
 
 export function applyTemplateTransformations(
@@ -44,9 +72,7 @@ export function applyTemplateTransformations(
   format: string,
   rawTemplateContents: string
 ): string {
-  let templateContents = rawTemplateContents;
-
-  templateContents = rawTemplateContents
+  let templateContents = rawTemplateContents
     .replace(/{{\s*date\s*}}/gi, filename)
     .replace(/{{\s*time\s*}}/gi, window.moment().format("HH:mm"))
     .replace(/{{\s*title\s*}}/gi, filename);
@@ -87,78 +113,15 @@ export function applyTemplateTransformations(
   }
 
   if (granularity === "month") {
-    templateContents = templateContents.replace(
-      /{{\s*(month)\s*(([+-]\d+)([yqmwdhs]))?\s*(:.+?)?}}/gi,
-      (_, _timeOrDate, calc, timeDelta, unit, momentFormat) => {
-        const now = window.moment();
-        const monthStart = date
-          .clone()
-          .startOf("month")
-          .set({
-            hour: now.get("hour"),
-            minute: now.get("minute"),
-            second: now.get("second"),
-          });
-        if (calc) {
-          monthStart.add(parseInt(timeDelta, 10), unit);
-        }
-
-        if (momentFormat) {
-          return monthStart.format(momentFormat.substring(1).trim());
-        }
-        return monthStart.format(format);
-      }
-    );
+    templateContents = applyPeriodTemplate(templateContents, "month", date, format);
   }
 
   if (granularity === "quarter") {
-    templateContents = templateContents.replace(
-      /{{\s*(quarter)\s*(([+-]\d+)([yqmwdhs]))?\s*(:.+?)?}}/gi,
-      (_, _timeOrDate, calc, timeDelta, unit, momentFormat) => {
-        const now = window.moment();
-        const monthStart = date
-          .clone()
-          .startOf("quarter")
-          .set({
-            hour: now.get("hour"),
-            minute: now.get("minute"),
-            second: now.get("second"),
-          });
-        if (calc) {
-          monthStart.add(parseInt(timeDelta, 10), unit);
-        }
-
-        if (momentFormat) {
-          return monthStart.format(momentFormat.substring(1).trim());
-        }
-        return monthStart.format(format);
-      }
-    );
+    templateContents = applyPeriodTemplate(templateContents, "quarter", date, format);
   }
 
   if (granularity === "year") {
-    templateContents = templateContents.replace(
-      /{{\s*(year)\s*(([+-]\d+)([yqmwdhs]))?\s*(:.+?)?}}/gi,
-      (_, _timeOrDate, calc, timeDelta, unit, momentFormat) => {
-        const now = window.moment();
-        const monthStart = date
-          .clone()
-          .startOf("year")
-          .set({
-            hour: now.get("hour"),
-            minute: now.get("minute"),
-            second: now.get("second"),
-          });
-        if (calc) {
-          monthStart.add(parseInt(timeDelta, 10), unit);
-        }
-
-        if (momentFormat) {
-          return monthStart.format(momentFormat.substring(1).trim());
-        }
-        return monthStart.format(format);
-      }
-    );
+    templateContents = applyPeriodTemplate(templateContents, "year", date, format);
   }
 
   return templateContents;
@@ -234,11 +197,8 @@ export async function getTemplateContents(
     const templateFile = metadataCache.getFirstLinkpathDest(normalizedTemplatePath, "");
     return templateFile ? vault.cachedRead(templateFile) : "";
   } catch (err) {
-    console.error(
-      `Failed to read the daily note template '${normalizedTemplatePath}'`,
-      err
-    );
-    new Notice("Failed to read the daily note template");
+    console.error(`Failed to read the template '${normalizedTemplatePath}'`, err);
+    new Notice("Failed to read the note template");
     return "";
   }
 }
@@ -258,31 +218,18 @@ export async function getNoteCreationPath(
 
 // Credit: @creationix/path.js
 export function join(...partSegments: string[]): string {
-  // Split the inputs into a list of path commands.
   let parts: string[] = [];
   for (let i = 0, l = partSegments.length; i < l; i++) {
     parts = parts.concat(partSegments[i].split("/"));
   }
-  // Interpret the path commands to get the new resolved path.
   const newParts = [];
   for (let i = 0, l = parts.length; i < l; i++) {
     const part = parts[i];
-    // Remove leading and trailing slashes
-    // Also remove "." segments
     if (!part || part === ".") continue;
-    // Push new path segments.
     else newParts.push(part);
   }
-  // Preserve the initial slash if there was one.
   if (parts[0] === "") newParts.unshift("");
-  // Turn back into a single string path.
   return newParts.join("/");
-}
-
-export function basename(fullPath: string): string {
-  let base = fullPath.substring(fullPath.lastIndexOf("/") + 1);
-  if (base.lastIndexOf(".") != -1) base = base.substring(0, base.lastIndexOf("."));
-  return base;
 }
 
 async function ensureFolderExists(app: App, path: string): Promise<void> {

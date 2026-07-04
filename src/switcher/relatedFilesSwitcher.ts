@@ -7,7 +7,7 @@ import { NLDNavigator, type DateNavigationItem } from "./switcher";
 const DEFAULT_INSTRUCTIONS = [
   { command: "*", purpose: "show all notes within this period" },
   { command: "↵", purpose: "to open" },
-  { command: "ctrl ↵", purpose: "to open in a new pane" },
+  { command: "shift ↵", purpose: "to open in a new pane" },
   { command: "esc", purpose: "to dismiss" },
 ];
 
@@ -51,9 +51,7 @@ export class RelatedFilesSwitcher extends SuggestModal<DateNavigationItem> {
     this.scope.register(["Shift"], "8", (evt: KeyboardEvent) => {
       evt.preventDefault();
       this.includeFinerGranularities = !this.includeFinerGranularities;
-      this.inputLabel.style.visibility = this.includeFinerGranularities
-        ? "visible"
-        : "hidden";
+      this.inputLabel.toggleVisibility(this.includeFinerGranularities);
       this.inputEl.dispatchEvent(new Event("input"));
     });
   }

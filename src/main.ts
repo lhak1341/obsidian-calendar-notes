@@ -69,8 +69,8 @@ export default class PeriodicNotesPlugin extends Plugin {
 
   unload(): void {
     this.settingsTab?.hide();
-    super.unload();
     this.timelineManager?.cleanup();
+    super.unload();
   }
 
   async onload(): Promise<void> {
