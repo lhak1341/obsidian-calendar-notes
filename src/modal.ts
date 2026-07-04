@@ -4,7 +4,6 @@ import type PeriodicNotesPlugin from "src/main";
 import { displayConfigs } from "./commands";
 
 export function showFileMenu(
-  app: App,
   plugin: PeriodicNotesPlugin,
   position: Point
 ): void {
@@ -29,7 +28,7 @@ export class PeriodicNoteCreateModal extends Modal {
     super(app);
 
     this.contentEl.addClass("periodic-modal");
-    this.contentEl.createEl("h2", { text: "Open Periodic Note" });
+    this.contentEl.createEl("h2", { text: "Open periodic note" });
 
     plugin.calendarSetManager.getActiveGranularities().forEach((granularity) => {
       const displayConfig = displayConfigs[granularity];

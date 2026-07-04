@@ -100,9 +100,8 @@ export class PeriodicNotesCache extends Component {
       const activeGranularities = granularities.filter((g) => calendarSet[g]?.enabled);
       for (const granularity of activeGranularities) {
         const config = calendarSet[granularity] as PeriodicConfig;
-        const rootFolder = this.app.vault.getAbstractFileByPath(
-          config.folder || "/"
-        ) as TFolder;
+        const rootFolder = this.app.vault.getAbstractFileByPath(config.folder || "/");
+        if (!(rootFolder instanceof TFolder)) continue;
 
         // Scan for filename matches
         memoizedRecurseChildren(rootFolder, (file: TAbstractFile) => {
@@ -270,7 +269,8 @@ export class PeriodicNotesCache extends Component {
           cacheData.matchData.exact === true &&
           cacheData.date.isSame(targetDate, granularity)
         ) {
-          return this.app.vault.getAbstractFileByPath(filePath) as TFile;
+          const file = this.app.vault.getAbstractFileByPath(filePath);
+          return file instanceof TFile ? file : null;
         }
       }
     }

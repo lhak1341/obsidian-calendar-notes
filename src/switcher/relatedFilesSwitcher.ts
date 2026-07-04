@@ -80,11 +80,11 @@ export class RelatedFilesSwitcher extends SuggestModal<DateNavigationItem> {
 
   renderSuggestion(value: DateNavigationItem, el: HTMLElement) {
     el.setText(value.label);
-    el.createEl("div", {
+    el.createDiv({
       cls: "suggestion-note",
       text: value.date.format(DEFAULT_FORMAT[value.granularity]),
     });
-    el.createEl("span", { cls: "suggestion-flair", prepend: true }, (el) => {
+    el.createSpan({ cls: "suggestion-flair", prepend: true }, (el) => {
       setIcon(el, `calendar-${value.granularity}`);
     });
   }

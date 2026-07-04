@@ -203,13 +203,13 @@ export class NLDNavigator extends SuggestModal<DateNavigationItem> {
       const format = getFormat(calendarSet, value.granularity);
       const folder = getFolder(calendarSet, value.granularity);
       el.setText(value.label);
-      el.createEl("span", { cls: "suggestion-flair", prepend: true }, (el) => {
+      el.createSpan({ cls: "suggestion-flair", prepend: true }, (el) => {
         setIcon(el, "add-note-glyph");
       });
       if (numRelatedNotes > 0) {
-        el.createEl("span", { cls: "suggestion-badge", text: `+${numRelatedNotes}` });
+        el.createSpan({ cls: "suggestion-badge", text: `+${numRelatedNotes}` });
       }
-      el.createEl("div", {
+      el.createDiv({
         cls: "suggestion-note",
         text: join(folder, value.date.format(format)),
       });
@@ -220,12 +220,12 @@ export class NLDNavigator extends SuggestModal<DateNavigationItem> {
     const filePath = this.app.metadataCache.fileToLinktext(periodicNote, curPath, true);
 
     el.setText(value.label);
-    el.createEl("div", { cls: "suggestion-note", text: filePath });
-    el.createEl("span", { cls: "suggestion-flair", prepend: true }, (el) => {
+    el.createDiv({ cls: "suggestion-note", text: filePath });
+    el.createSpan({ cls: "suggestion-flair", prepend: true }, (el) => {
       setIcon(el, `calendar-${value.granularity}`);
     });
     if (numRelatedNotes > 0) {
-      el.createEl("span", { cls: "suggestion-badge", text: `+${numRelatedNotes}` });
+      el.createSpan({ cls: "suggestion-badge", text: `+${numRelatedNotes}` });
     }
   }
 

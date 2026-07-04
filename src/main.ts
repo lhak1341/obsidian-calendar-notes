@@ -24,10 +24,7 @@ import {
   DEFAULT_SETTINGS,
   DEFAULT_PERIODIC_CONFIG,
 } from "./settings";
-import {
-  configureGlobalMomentLocale,
-  initializeLocaleConfigOnce,
-} from "./settings/localization";
+import { initializeLocaleConfigOnce } from "./settings/localization";
 import {
   createNewCalendarSet,
   findStartupNoteConfig,
@@ -114,7 +111,6 @@ export default class PeriodicNotesPlugin extends Plugin {
         }
         new NLDNavigator(this.app, this).open();
       },
-      hotkeys: [],
     });
 
     this.addCommand({
@@ -123,7 +119,6 @@ export default class PeriodicNotesPlugin extends Plugin {
       callback: () => {
         new CalendarSetSuggestModal(this.app, this).open();
       },
-      hotkeys: [],
     });
 
     this.app.workspace.onLayoutReady(() => {
@@ -181,7 +176,7 @@ export default class PeriodicNotesPlugin extends Plugin {
       );
       this.registerDomEvent(this.ribbonEl, "contextmenu", (e: MouseEvent) => {
         e.preventDefault();
-        showFileMenu(this.app, this, {
+        showFileMenu(this, {
           x: e.pageX,
           y: e.pageY,
         });

@@ -1,4 +1,4 @@
-import { App, PluginSettingTab } from "obsidian";
+import { App, PluginSettingTab, type SettingDefinitionItem } from "obsidian";
 import { DEFAULT_CALENDARSET_ID } from "src/calendarSetManager";
 import type { CalendarSet, PeriodicConfig } from "src/types";
 import { mount, unmount } from "svelte";
@@ -59,6 +59,11 @@ export class PeriodicNotesSettingsTab extends PluginSettingTab {
     this.plugin = plugin;
   }
 
+  getSettingDefinitions(): SettingDefinitionItem[] {
+    return [];
+  }
+
+  // eslint-disable-next-line obsidianmd/settings-tab/no-deprecated-display -- getSettingDefinitions returns [], so Obsidian still calls display() for rendering
   display(): void {
     this.containerEl.empty();
 
