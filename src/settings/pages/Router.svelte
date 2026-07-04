@@ -1,41 +1,16 @@
 <script lang="ts">
   import type { App } from "obsidian";
+  import { writable, type Writable } from "svelte/store";
 
-  import type CalendarSetManager from "src/calendarSetManager";
-  import { router } from "src/settings/stores";
-  import Breadcrumbs from "src/settings/components/Breadcrumbs.svelte";
-
-  import Dashboard from "./dashboard/Dashboard.svelte";
-  import Details from "./details/Details.svelte";
-  import { onDestroy, onMount } from "svelte";
-  import { get, writable, type Writable } from "svelte/store";
   import type { ISettings } from "src/types";
-  import {
-    getLocalizationSettings,
-    type ILocalizationSettings,
-  } from "../localization";
+  import { getLocalizationSettings } from "../localization";
+
+  import Settings from "./Settings.svelte";
 
   export let app: App;
-  export let manager: CalendarSetManager;
   export let settings: Writable<ISettings>;
 
-  let localization = writable(getLocalizationSettings(app));
-
-  onMount(() => {
-    router.navigate(["Periodic Notes", get(settings).activeCalendarSet]);
-  });
-
-  onDestroy(() => {
-    router.reset();
-  });
+  const localization = writable(getLocalizationSettings(app));
 </script>
 
-<Breadcrumbs />
-
-{#if $router.path.length > 1}
-  {#key $router.path[1]}
-    <Details {app} {settings} {manager} selectedCalendarSet={$router.path[1]} />
-  {/key}
-{:else}
-  <Dashboard {app} {settings} {localization} {manager} />
-{/if}
+<Settings {app} {settings} {localization} />

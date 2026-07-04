@@ -1,10 +1,10 @@
 import { DEFAULT_FORMAT } from "./constants";
 import { DEFAULT_PERIODIC_CONFIG } from "./settings/defaults";
 import { removeEscapedCharacters } from "./settings/validation";
-import type { CalendarSet, Granularity, PeriodicConfig } from "./types";
+import type { Granularity, ISettings, PeriodicConfig } from "./types";
 
-export function getFormat(calendarSet: CalendarSet, granularity: Granularity): string {
-  return calendarSet[granularity]?.format || DEFAULT_FORMAT[granularity];
+export function getFormat(settings: ISettings, granularity: Granularity): string {
+  return settings[granularity]?.format || DEFAULT_FORMAT[granularity];
 }
 
 /**
@@ -12,11 +12,8 @@ export function getFormat(calendarSet: CalendarSet, granularity: Granularity): s
  * paths that match either `YYYY/YYYY-MM-DD` exactly, or just `YYYY-MM-DD` in case
  * users move the file later.
  */
-export function getPossibleFormats(
-  calendarSet: CalendarSet,
-  granularity: Granularity
-): string[] {
-  const format = calendarSet[granularity]?.format;
+export function getPossibleFormats(settings: ISettings, granularity: Granularity): string[] {
+  const format = settings[granularity]?.format;
   if (!format) return [DEFAULT_FORMAT[granularity]];
 
   const partialFormatExp = /[^/]*$/.exec(format);
@@ -27,15 +24,12 @@ export function getPossibleFormats(
   return [format];
 }
 
-export function getFolder(calendarSet: CalendarSet, granularity: Granularity): string {
-  return calendarSet[granularity]?.folder || "/";
+export function getFolder(settings: ISettings, granularity: Granularity): string {
+  return settings[granularity]?.folder || "/";
 }
 
-export function getConfig(
-  calendarSet: CalendarSet,
-  granularity: Granularity
-): PeriodicConfig {
-  return calendarSet[granularity] ?? DEFAULT_PERIODIC_CONFIG;
+export function getConfig(settings: ISettings, granularity: Granularity): PeriodicConfig {
+  return settings[granularity] ?? DEFAULT_PERIODIC_CONFIG;
 }
 
 export function isIsoFormat(format: string): boolean {

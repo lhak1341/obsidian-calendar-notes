@@ -27,7 +27,6 @@ export class PeriodicNotesSettingsTab extends PluginSettingTab {
       target: this.containerEl,
       props: {
         app: this.app,
-        manager: this.plugin.calendarSetManager,
         settings: this.plugin.settings,
       },
     });

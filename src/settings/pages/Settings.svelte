@@ -1,17 +1,13 @@
 <script lang="ts">
-  import { App, setIcon } from "obsidian";
-  import { onMount } from "svelte";
+  import { App } from "obsidian";
   import type { Writable } from "svelte/store";
 
-  import CalendarSetManager from "src/calendarSetManager";
-  import { router } from "src/settings/stores";
   import type { ISettings } from "src/types";
+  import { granularities } from "src/types";
   import Dropdown from "src/settings/components/Dropdown.svelte";
-  import Footer from "src/settings/components/Footer.svelte";
   import SettingItem from "src/settings/components/SettingItem.svelte";
   import Toggle from "src/settings/components/Toggle.svelte";
   import {
-    createNewCalendarSet,
     getLocaleOptions,
     getWeekStartOptions,
   } from "src/settings/utils";
@@ -21,60 +17,21 @@
     type IWeekStartOption,
   } from "src/settings/localization";
 
-  import GettingStartedBanner from "./GettingStartedBanner.svelte";
-  import CalendarSetMenuItem from "./CalendarSets/MenuItem.svelte";
+  import PeriodicGroup from "./details/PeriodicGroup.svelte";
 
   export let app: App;
-  export let manager: CalendarSetManager;
-  export let localization: Writable<ILocalizationSettings>;
   export let settings: Writable<ISettings>;
-
-  let addEl: HTMLElement;
-
-  function addCalendarset(): void {
-    let iter = 1;
-    const calSets = $settings.calendarSets;
-    while (calSets.find((set) => set.id === `Calendar set ${iter}`)) {
-      iter++;
-    }
-    const id = `Calendar set ${iter}`;
-    settings.update(createNewCalendarSet(id));
-    router.navigate(["Periodic Notes", id], {
-      shouldRename: true,
-    });
-  }
-
-  onMount(() => {
-    setIcon(addEl, "plus");
-  });
+  export let localization: Writable<ILocalizationSettings>;
 </script>
 
-{#if $settings.showGettingStartedBanner}
-  <GettingStartedBanner
-    {app}
-    handleTeardown={() => {
-      $settings.showGettingStartedBanner = false;
-    }}
-  />
-{/if}
+<!-- Note types -->
+{#each granularities as granularity}
+  <PeriodicGroup {app} {granularity} {settings} />
+{/each}
 
-<div class="section-nav">
-  <h3 class="section-title">Calendar Sets</h3>
-  <div class="clickable-icon" bind:this={addEl} on:click={addCalendarset} />
-</div>
-<div class="calendarset-container">
-  {#each $settings.calendarSets as calendarSet}
-    <CalendarSetMenuItem
-      {calendarSet}
-      {manager}
-      {settings}
-      viewDetails={() => router.navigate(["Periodic Notes", calendarSet.id])}
-    />
-  {/each}
-</div>
-
+<!-- General -->
 <SettingItem
-  name="Show “Timeline” complication on periodic notes"
+  name='Show "Timeline" complication on periodic notes'
   description="Adds a collapsible timeline to the top-right of all periodic notes"
   type="toggle"
   isHeading={false}
@@ -88,6 +45,59 @@
   />
 </SettingItem>
 
+<!-- Calendar -->
+<h3>Calendar</h3>
+<SettingItem
+  name="Show week numbers"
+  description="Display ISO week numbers in the left column of the calendar"
+  type="toggle"
+  isHeading={false}
+>
+  <Toggle
+    slot="control"
+    isEnabled={$settings.showWeekNums}
+    onChange={(val) => {
+      $settings.showWeekNums = val;
+    }}
+  />
+</SettingItem>
+
+<SettingItem
+  name="Confirm before creating note"
+  description="Show a confirmation prompt before creating a new periodic note from the calendar"
+  type="toggle"
+  isHeading={false}
+>
+  <Toggle
+    slot="control"
+    isEnabled={$settings.shouldConfirmBeforeCreate}
+    onChange={(val) => {
+      $settings.shouldConfirmBeforeCreate = val;
+    }}
+  />
+</SettingItem>
+
+<SettingItem
+  name="Words per dot"
+  description="Number of words in a daily note required to add one dot (0 to disable)"
+  type="dropdown"
+  isHeading={false}
+>
+  <input
+    slot="control"
+    class="words-per-dot-input"
+    type="number"
+    min="0"
+    step="50"
+    value={$settings.wordsPerDot}
+    on:change={(e) => {
+      const val = parseInt((e.target as HTMLInputElement).value, 10);
+      if (!isNaN(val) && val >= 0) $settings.wordsPerDot = val;
+    }}
+  />
+</SettingItem>
+
+<!-- Localization -->
 <h3>Localization</h3>
 <div class="setting-item-description">
   These settings are applied to your entire vault, meaning the values you
@@ -125,28 +135,14 @@
       const val = (e.target as HTMLSelectElement).value;
       $localization.localeOverride = val;
       app.vault.setConfig("localeOverride", val);
+      configureGlobalMomentLocale($localization.localeOverride, $localization.weekStart);
     }}
   />
 </SettingItem>
 
-<Footer />
-
 <style>
-  .calendarset-container {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 30px;
-    padding-bottom: 1.4em;
-  }
-
-  .section-title {
-    margin: 0;
-  }
-
-  .section-nav {
-    align-items: center;
-    display: flex;
-    justify-content: space-between;
-    margin: 2em 0 0.8em;
+  .words-per-dot-input {
+    width: 80px;
+    text-align: right;
   }
 </style>

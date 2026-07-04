@@ -1,7 +1,8 @@
 ## Linting
 - Run `bun run lint:fix` or `./node_modules/.bin/eslint . --fix` — `npx eslint` fails through the rtk hook
 - `eslint-plugin-obsidianmd` is registered manually in `eslint.config.js` (plugin + rules inline); do NOT spread `obsidianmd.configs.recommended` — it bundles conflicting plugins (@microsoft/sdl, no-unsanitized, eslint-comments, etc.)
-- `eslint-plugin-import` crashes on ESLint 10 (`getTokenOrCommentBefore is not a function`) when `import/order` tries to auto-fix: keep imports alphabetical within each group, and never use `export type { X } from "..."` re-export patterns
+- Uses `eslint-plugin-import-x` (ESLint 10-compatible); auto-fix works — run `eslint . --fix` to sort imports
+- `bun run dev` without `TEST_VAULT` env var writes build output to `undefined.obsidian/` in repo root (gitignored); set `TEST_VAULT` to a trailing-slash vault path to use a real test vault
 
 ## Code Analysis
 - `bun run build` runs esbuild + eslint; errors appear as `ERROR` lines and `X ERRORS` in the COMPLETED summary

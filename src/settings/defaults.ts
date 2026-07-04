@@ -1,4 +1,3 @@
-import { DEFAULT_CALENDARSET_ID } from "src/constants";
 import type { ISettings, PeriodicConfig } from "src/types";
 
 export const DEFAULT_PERIODIC_CONFIG: PeriodicConfig = Object.freeze({
@@ -13,12 +12,21 @@ export const DEFAULT_PERIODIC_CONFIG: PeriodicConfig = Object.freeze({
 export const DEFAULT_SETTINGS: ISettings = {
   // Onboarding
   installedVersion: "1.0.0-beta3",
-  showGettingStartedBanner: true,
+  showGettingStartedBanner: false,
   hasMigratedDailyNoteSettings: false,
   hasMigratedWeeklyNoteSettings: false,
 
-  // Configuration / Preferences
-  activeCalendarSet: DEFAULT_CALENDARSET_ID,
-  calendarSets: [],
   enableTimelineComplication: true,
+
+  // Per-granularity defaults (day enabled by default)
+  day: { ...DEFAULT_PERIODIC_CONFIG, enabled: true },
+  week: { ...DEFAULT_PERIODIC_CONFIG },
+  month: { ...DEFAULT_PERIODIC_CONFIG },
+  quarter: { ...DEFAULT_PERIODIC_CONFIG },
+  year: { ...DEFAULT_PERIODIC_CONFIG },
+
+  // Calendar view
+  showWeekNums: false,
+  wordsPerDot: 250,
+  shouldConfirmBeforeCreate: true,
 };

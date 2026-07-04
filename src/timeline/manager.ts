@@ -1,7 +1,8 @@
 import { App, Component, MarkdownView } from "obsidian";
+import { mount, unmount } from "svelte";
+
 import { PeriodicNotesCache } from "src/cache";
 import type { IPeriodicNoteController } from "src/types";
-import { mount, unmount } from "svelte";
 
 import Timeline from "./Timeline.svelte";
 

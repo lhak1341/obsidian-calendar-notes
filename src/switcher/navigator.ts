@@ -1,6 +1,7 @@
 import type { Moment } from "moment";
 import { type NLDatesPlugin, setIcon, App, SuggestModal, TFile } from "obsidian";
-import { getFolder, getFormat, isIsoFormat } from "src/calendarSet";
+
+import { isIsoFormat } from "src/calendarSet";
 import { DEFAULT_FORMAT } from "src/constants";
 import type { MatchType } from "src/types";
 import { getRelativeDate, isMetaPressed, join } from "src/utils";
@@ -192,9 +193,8 @@ export class NLDNavigator extends SuggestModal<DateNavigationItem> {
     const periodicNote = this.plugin.getPeriodicNote(value.granularity, value.date);
 
     if (!periodicNote) {
-      const calendarSet = this.plugin.getActiveSet();
-      const format = getFormat(calendarSet, value.granularity);
-      const folder = getFolder(calendarSet, value.granularity);
+      const format = this.plugin.getFormat(value.granularity);
+      const folder = this.plugin.getActiveConfig(value.granularity).folder || "/";
       el.setText(value.label);
       el.createSpan({ cls: "suggestion-flair", prepend: true }, (el) => {
         setIcon(el, "add-note-glyph");

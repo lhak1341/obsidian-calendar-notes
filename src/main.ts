@@ -3,13 +3,10 @@ import { addIcon, Plugin, TFile } from "obsidian";
 import { get, writable, type Writable } from "svelte/store";
 
 import { PeriodicNotesCache } from "./cache";
-import CalendarSetManager, {
-  isLegacySettings,
-  migrateDailyNoteSettings,
-  migrateLegacySettingsToCalendarSet,
-} from "./calendarSetManager";
+import { VIEW_TYPE_CALENDAR } from "./calendar/constants";
+import { CalendarView } from "./calendar/view";
+import { getConfig, getFormat } from "./calendarSet";
 import { displayConfigs, getCommands } from "./commands";
-import { DEFAULT_CALENDARSET_ID } from "./constants";
 import {
   calendarDayIcon,
   calendarMonthIcon,
@@ -26,15 +23,19 @@ import {
 } from "./settings";
 import { initializeLocaleConfigOnce } from "./settings/localization";
 import {
-  createNewCalendarSet,
   findStartupNoteConfig,
   hasLegacyDailyNoteSettings,
-  setActiveSet,
 } from "./settings/utils";
-import { CalendarSetSuggestModal } from "./switcher/calendarSetSwitcher";
 import { NLDNavigator } from "./switcher/navigator";
 import TimelineManager from "./timeline/manager";
-import { granularities, type CalendarSet, type Granularity, type IOpenOpts, type IPeriodicNoteController, type PeriodicConfig, type PeriodicNoteCachedMetadata } from "./types";
+import {
+  granularities,
+  type Granularity,
+  type IOpenOpts,
+  type IPeriodicNoteController,
+  type PeriodicConfig,
+  type PeriodicNoteCachedMetadata,
+} from "./types";
 import {
   applyTemplateTransformations,
   getNoteCreationPath,
@@ -43,7 +44,6 @@ import {
 } from "./utils";
 
 // obsidian-daily-notes-interface reads plugin.settings.daily/weekly/etc. as plain objects.
-// Extend Writable with those legacy keys so the type system accepts the compat shim.
 type LegacyConfig = PeriodicConfig & { template?: string };
 type SettingsStore = Writable<ISettings> & {
   daily?: LegacyConfig;
@@ -53,12 +53,37 @@ type SettingsStore = Writable<ISettings> & {
   yearly?: LegacyConfig;
 };
 
+// Shape of the old calendarSets-based data.json (for migration)
+interface LegacyCalendarSetData {
+  id: string;
+  day?: PeriodicConfig;
+  week?: PeriodicConfig;
+  month?: PeriodicConfig;
+  quarter?: PeriodicConfig;
+  year?: PeriodicConfig;
+}
+
+interface LegacyPeriodicitySettings {
+  enabled: boolean;
+  folder?: string;
+  format?: string;
+  template?: string;
+}
+
+interface LegacyPluginData {
+  daily?: LegacyPeriodicitySettings;
+  weekly?: LegacyPeriodicitySettings;
+  monthly?: LegacyPeriodicitySettings;
+  quarterly?: LegacyPeriodicitySettings;
+  yearly?: LegacyPeriodicitySettings;
+  calendarSets?: LegacyCalendarSetData[];
+}
+
 export default class PeriodicNotesPlugin extends Plugin implements IPeriodicNoteController {
   public settings!: SettingsStore;
   private ribbonEl: HTMLElement | null = null;
 
   private cache!: PeriodicNotesCache;
-  public calendarSetManager!: CalendarSetManager;
   private timelineManager!: TimelineManager;
   private settingsTab!: PeriodicNotesSettingsTab;
 
@@ -75,6 +100,8 @@ export default class PeriodicNotesPlugin extends Plugin implements IPeriodicNote
     addIcon("calendar-quarter", calendarQuarterIcon);
     addIcon("calendar-year", calendarYearIcon);
 
+    this.registerView(VIEW_TYPE_CALENDAR, (leaf) => new CalendarView(leaf, this));
+
     this.settings = writable<ISettings>() as SettingsStore;
     this.addLegacySettingsCompat();
     await this.loadSettings();
@@ -83,14 +110,13 @@ export default class PeriodicNotesPlugin extends Plugin implements IPeriodicNote
     initializeLocaleConfigOnce(this.app);
 
     this.ribbonEl = null;
-    this.calendarSetManager = new CalendarSetManager(this.settings);
-    this.cache = new PeriodicNotesCache(this.app, this.calendarSetManager);
+    this.cache = new PeriodicNotesCache(this.app, this.settings);
     this.timelineManager = new TimelineManager(this.app, this, this.cache, this);
 
     this.openPeriodicNote = this.openPeriodicNote.bind(this);
     this.settingsTab = new PeriodicNotesSettingsTab(this.app, this);
     this.addSettingTab(this.settingsTab);
-    
+
     this.configureRibbonIcons();
     this.configureCommands();
 
@@ -109,27 +135,21 @@ export default class PeriodicNotesPlugin extends Plugin implements IPeriodicNote
     });
 
     this.addCommand({
-      id: "switch-calendarset",
-      name: "Switch active calendar set...",
-      callback: () => {
-        new CalendarSetSuggestModal(this.app, this).open();
-      },
+      id: "open-calendar",
+      name: "Open calendar",
+      callback: () => this.activateCalendarView(),
     });
 
     this.app.workspace.onLayoutReady(() => {
       const startupNoteConfig = findStartupNoteConfig(this.settings);
       if (startupNoteConfig) {
-        this.openPeriodicNote(startupNoteConfig.granularity, window.moment(), {
-          calendarSet: startupNoteConfig.calendarSet,
-        });
+        this.openPeriodicNote(startupNoteConfig.granularity, window.moment());
       }
     });
   }
 
   private addLegacySettingsCompat(): void {
     // obsidian-daily-notes-interface reads plugin.settings.daily/weekly/monthly/quarterly/yearly
-    // as plain objects. Our settings use CalendarSet keys (day/week/month/quarter/year) so we
-    // add getters that map from the legacy names to the active calendar set's config.
     const keyMap: Array<[string, Granularity]> = [
       ["daily", "day"],
       ["weekly", "week"],
@@ -141,8 +161,7 @@ export default class PeriodicNotesPlugin extends Plugin implements IPeriodicNote
       Object.defineProperty(this.settings, legacyKey, {
         get: (): LegacyConfig | undefined => {
           const s = get(this.settings);
-          const activeSet = s?.calendarSets?.find((cs) => cs.id === s.activeCalendarSet);
-          const config = activeSet?.[granularity];
+          const config = s?.[granularity];
           return config ? { ...config, template: config.templatePath } : undefined;
         },
         enumerable: false,
@@ -154,9 +173,9 @@ export default class PeriodicNotesPlugin extends Plugin implements IPeriodicNote
   private configureRibbonIcons() {
     this.ribbonEl?.detach();
 
-    const configuredGranularities = this.calendarSetManager.getActiveGranularities();
-    if (configuredGranularities.length) {
-      const granularity = configuredGranularities[0];
+    const activeGranularities = this.getActiveGranularities();
+    if (activeGranularities.length) {
+      const granularity = activeGranularities[0];
       const config = displayConfigs[granularity];
       this.ribbonEl = this.addRibbonIcon(
         `calendar-${granularity}`,
@@ -180,55 +199,68 @@ export default class PeriodicNotesPlugin extends Plugin implements IPeriodicNote
   }
 
   private configureCommands() {
+    const s = get(this.settings);
+
     // Remove disabled commands
-    const activeSet = this.calendarSetManager.getActiveSet();
     granularities
-      .filter((granularity) => !activeSet[granularity]?.enabled)
+      .filter((granularity) => !s[granularity]?.enabled)
       .forEach((granularity: Granularity) => {
         getCommands(this.app, this, granularity).forEach((command) =>
           this.app.commands.removeCommand(`periodic-notes:${command.id}`)
         );
       });
 
-    // register enabled commands
-    this.calendarSetManager
-      .getActiveGranularities()
-      .forEach((granularity: Granularity) => {
-        getCommands(this.app, this, granularity).forEach(this.addCommand.bind(this));
-      });
+    // Register enabled commands
+    this.getActiveGranularities().forEach((granularity: Granularity) => {
+      getCommands(this.app, this, granularity).forEach(this.addCommand.bind(this));
+    });
   }
 
   async loadSettings(): Promise<void> {
-    const savedSettings = await this.loadData();
-    const settings = Object.assign({}, DEFAULT_SETTINGS, savedSettings || {});
-    this.settings.set(settings);
+    const savedData = (await this.loadData()) as LegacyPluginData & Partial<ISettings> | null;
+    let settings: ISettings = Object.assign({}, DEFAULT_SETTINGS, savedData || {});
 
-    if (!settings.calendarSets || settings.calendarSets.length === 0) {
-      // check for migration
-      if (isLegacySettings(settings)) {
-        this.settings.update(
-          createNewCalendarSet(
-            DEFAULT_CALENDARSET_ID,
-            migrateLegacySettingsToCalendarSet(settings)
-          )
-        );
-      } else if (hasLegacyDailyNoteSettings(this.app)) {
-        this.settings.update(
-          createNewCalendarSet(DEFAULT_CALENDARSET_ID, migrateDailyNoteSettings(settings))
-        );
-      } else {
-        // otherwise create new default calendar set
-        this.settings.update(
-          createNewCalendarSet(DEFAULT_CALENDARSET_ID, {
-            day: {
-              ...DEFAULT_PERIODIC_CONFIG,
-              enabled: true,
-            },
-          })
-        );
+    // Migration 1: old calendarSets array → flat fields
+    // Note: run BEFORE Object.assign so defaults don't mask real values
+    if (savedData?.calendarSets?.length) {
+      const set = savedData.calendarSets[0];
+      for (const g of granularities) {
+        if (set[g]) settings[g] = set[g];
       }
-      this.settings.update(setActiveSet(DEFAULT_CALENDARSET_ID));
+      // Remove the old keys to keep data.json clean on next save
+      delete (settings as unknown as Record<string, unknown>).calendarSets;
+      delete (settings as unknown as Record<string, unknown>).activeCalendarSet;
     }
+    // Migration 2: very old daily/weekly/etc. format
+    else if (
+      savedData?.daily ||
+      savedData?.weekly ||
+      savedData?.monthly ||
+      savedData?.quarterly ||
+      savedData?.yearly
+    ) {
+      const migrateConfig = (src: LegacyPeriodicitySettings | undefined): PeriodicConfig => ({
+        enabled: src?.enabled ?? false,
+        format: src?.format || "",
+        folder: src?.folder || "",
+        openAtStartup: false,
+        templatePath: src?.template,
+      });
+      if (savedData.daily) settings.day = migrateConfig(savedData.daily);
+      if (savedData.weekly) settings.week = migrateConfig(savedData.weekly);
+      if (savedData.monthly) settings.month = migrateConfig(savedData.monthly);
+      if (savedData.quarterly) settings.quarter = migrateConfig(savedData.quarterly);
+      if (savedData.yearly) settings.year = migrateConfig(savedData.yearly);
+    }
+    // Migration 3: very old Obsidian daily-notes plugin settings
+    else if (!savedData?.day && hasLegacyDailyNoteSettings(this.app)) {
+      settings.day = {
+        ...DEFAULT_PERIODIC_CONFIG,
+        enabled: true,
+      };
+    }
+
+    this.settings.set(settings);
   }
 
   private async onUpdateSettings(newSettings: ISettings): Promise<void> {
@@ -236,16 +268,30 @@ export default class PeriodicNotesPlugin extends Plugin implements IPeriodicNote
     this.configureCommands();
     this.configureRibbonIcons();
 
-    // Integrations (i.e. Calendar Plugin) can listen for changes to settings
     this.app.workspace.trigger("periodic-notes:settings-updated");
+  }
+
+  public async activateCalendarView(): Promise<void> {
+    const { workspace } = this.app;
+    const existing = workspace.getLeavesOfType(VIEW_TYPE_CALENDAR);
+    if (existing.length > 0) {
+      workspace.revealLeaf(existing[0]);
+      return;
+    }
+    const leaf = workspace.getRightLeaf(false);
+    if (leaf) {
+      await leaf.setViewState({ type: VIEW_TYPE_CALENDAR, active: true });
+      workspace.revealLeaf(leaf);
+    }
   }
 
   public async createPeriodicNote(
     granularity: Granularity,
     date: Moment
   ): Promise<TFile> {
-    const config = this.calendarSetManager.getActiveConfig(granularity);
-    const format = this.calendarSetManager.getFormat(granularity);
+    const s = get(this.settings);
+    const config = getConfig(s, granularity);
+    const format = getFormat(s, granularity);
     const filename = date.format(format);
     const templateContents = await getTemplateContents(this.app, config.templatePath);
     const renderedContents = applyTemplateTransformations(
@@ -260,25 +306,15 @@ export default class PeriodicNotesPlugin extends Plugin implements IPeriodicNote
   }
 
   public getPeriodicNote(granularity: Granularity, date: Moment): TFile | null {
-    return this.cache.getPeriodicNote(
-      this.calendarSetManager.getActiveId(),
-      granularity,
-      date
-    );
+    return this.cache.getPeriodicNote(granularity, date);
   }
 
-  // TODO: What API do I want for this?
   public getPeriodicNotes(
     granularity: Granularity,
     date: Moment,
     includeFinerGranularities = false
   ): PeriodicNoteCachedMetadata[] {
-    return this.cache.getPeriodicNotes(
-      this.calendarSetManager.getActiveId(),
-      granularity,
-      date,
-      includeFinerGranularities
-    );
+    return this.cache.getPeriodicNotes(granularity, date, includeFinerGranularities);
   }
 
   public isPeriodic(filePath: string, granularity?: Granularity): boolean {
@@ -286,11 +322,10 @@ export default class PeriodicNotesPlugin extends Plugin implements IPeriodicNote
   }
 
   public findAdjacent(
-    calendarSet: string,
     filePath: string,
     direction: "forwards" | "backwards"
   ): PeriodicNoteCachedMetadata | null {
-    return this.cache.findAdjacent(calendarSet, filePath, direction);
+    return this.cache.findAdjacent(filePath, direction);
   }
 
   public findInCache(filePath: string): PeriodicNoteCachedMetadata | null {
@@ -302,13 +337,9 @@ export default class PeriodicNotesPlugin extends Plugin implements IPeriodicNote
     date: Moment,
     opts?: IOpenOpts
   ): Promise<void> {
-    const { inNewSplit = false, calendarSet } = opts ?? {};
+    const { inNewSplit = false } = opts ?? {};
     const { workspace } = this.app;
-    let file = this.cache.getPeriodicNote(
-      calendarSet ?? this.calendarSetManager.getActiveId(),
-      granularity,
-      date
-    );
+    let file = this.cache.getPeriodicNote(granularity, date);
     if (!file) {
       file = await this.createPeriodicNote(granularity, date);
     }
@@ -317,31 +348,16 @@ export default class PeriodicNotesPlugin extends Plugin implements IPeriodicNote
     await leaf.openFile(file, { active: true });
   }
 
-  public getActiveId(): string {
-    return this.calendarSetManager.getActiveId();
-  }
-
   public getActiveGranularities(): Granularity[] {
-    return this.calendarSetManager.getActiveGranularities();
+    const s = get(this.settings);
+    return granularities.filter((g) => s[g]?.enabled);
   }
 
   public getActiveConfig(granularity: Granularity): PeriodicConfig {
-    return this.calendarSetManager.getActiveConfig(granularity);
-  }
-
-  public getActiveSet(): CalendarSet {
-    return this.calendarSetManager.getActiveSet();
-  }
-
-  public getCalendarSets(): CalendarSet[] {
-    return this.calendarSetManager.getCalendarSets();
+    return getConfig(get(this.settings), granularity);
   }
 
   public getFormat(granularity: Granularity): string {
-    return this.calendarSetManager.getFormat(granularity);
-  }
-
-  public setActiveSet(id: string): void {
-    this.calendarSetManager.setActiveSet(id);
+    return getFormat(get(this.settings), granularity);
   }
 }

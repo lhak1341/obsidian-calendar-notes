@@ -1,11 +1,11 @@
 import tsPlugin from "@typescript-eslint/eslint-plugin";
 import tsParser from "@typescript-eslint/parser";
-import importPlugin from "eslint-plugin-import";
+import importPlugin from "eslint-plugin-import-x";
 import obsidianmd from "eslint-plugin-obsidianmd";
 
 export default [
   {
-    ignores: ["node_modules/**", "main.js", ".yarn/**"],
+    ignores: ["node_modules/**", "main.js", ".yarn/**", "undefined.obsidian/**"],
   },
   {
     files: ["**/*.ts"],
@@ -33,6 +33,8 @@ export default [
             "index",
             "object",
           ],
+          pathGroups: [{ pattern: "src/**", group: "internal", position: "before" }],
+          pathGroupsExcludedImportTypes: [],
           "newlines-between": "always",
           alphabetize: { order: "asc", caseInsensitive: true },
         },

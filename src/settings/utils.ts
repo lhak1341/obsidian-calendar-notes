@@ -1,107 +1,8 @@
-import cloneDeep from "lodash/cloneDeep";
 import { App, DailyNotesPlugin, type DailyNotesSettings } from "obsidian";
-import {
-  granularities,
-  type CalendarSet,
-  type Granularity,
-  type PeriodicConfig,
-} from "src/types";
-import { get, type Updater, type Writable } from "svelte/store";
+import { get, type Readable } from "svelte/store";
 
-import type { ISettings } from "src/types";
-
-import { DEFAULT_PERIODIC_CONFIG } from "./defaults";
-
-const defaultPeriodicSettings = granularities.reduce((acc, g) => {
-  acc[g] = { ...DEFAULT_PERIODIC_CONFIG };
-  return acc;
-}, {} as Record<Granularity, PeriodicConfig>);
-
-type DeleteFunc = (calendarSetId: string) => Updater<ISettings>;
-export const deleteCalendarSet: DeleteFunc = (calendarSetId: string) => {
-  return (settings: ISettings) => {
-    const calendarSet = settings.calendarSets.find((c) => c.id === calendarSetId);
-    if (calendarSet) {
-      settings.calendarSets.remove(calendarSet);
-    }
-
-    if (calendarSetId === settings.activeCalendarSet) {
-      const fallbackCalendarSet = settings.calendarSets[0].id;
-      settings.activeCalendarSet = fallbackCalendarSet;
-    }
-
-    return settings;
-  };
-};
-
-type CreateFunc = (
-  calendarSetId: string,
-  refSettings?: Partial<CalendarSet>
-) => Updater<ISettings>;
-export const createNewCalendarSet: CreateFunc = (
-  id: string,
-  refSettings?: Partial<CalendarSet>
-) => {
-  return (settings: ISettings) => {
-    settings.calendarSets.push({
-      ...cloneDeep(defaultPeriodicSettings),
-      ...cloneDeep(refSettings),
-      id,
-      ctime: window.moment().format(),
-    });
-    return settings;
-  };
-};
-
-type UpdateActiveFunc = (
-  calendarSetId: string,
-  refSettings?: Partial<CalendarSet>
-) => Updater<ISettings>;
-export const setActiveSet: UpdateActiveFunc = (id: string) => {
-  return (settings: ISettings) => {
-    settings.activeCalendarSet = id;
-    return settings;
-  };
-};
-
-export const clearStartupNote: Updater<ISettings> = (settings: ISettings) => {
-  for (const calendarSet of settings.calendarSets) {
-    for (const granularity of granularities) {
-      const config = calendarSet[granularity];
-      if (config && config.openAtStartup) {
-        config.openAtStartup = false;
-      }
-    }
-  }
-  return settings;
-};
-
-interface StartupNoteConfig {
-  calendarSet: string;
-  granularity: Granularity;
-}
-
-type FindStartupNoteConfigFunc = (
-  settings: Writable<ISettings>
-) => StartupNoteConfig | null;
-export const findStartupNoteConfig: FindStartupNoteConfigFunc = (
-  settings: Writable<ISettings>
-) => {
-  const calendarSets = get(settings).calendarSets;
-  for (const calendarSet of calendarSets) {
-    for (const granularity of granularities) {
-      const config = calendarSet[granularity];
-      if (config && config.openAtStartup) {
-        return {
-          calendarSet: calendarSet.id,
-          granularity,
-        };
-      }
-    }
-  }
-
-  return null;
-};
+import type { Granularity, ISettings } from "src/types";
+import { granularities } from "src/types";
 
 export const wrapAround = (value: number, size: number): number => {
   return ((value % size) + size) % size;
@@ -179,4 +80,26 @@ export function getWeekStartOptions() {
     { label: `Locale default (${localeWeekStart})`, value: "locale" },
     ...localizedWeekdays.map((day, i) => ({ value: weekdays[i], label: day })),
   ];
+}
+
+export function findStartupNoteConfig(
+  settings: Readable<ISettings>
+): { granularity: Granularity } | null {
+  const s = get(settings);
+  for (const granularity of granularities) {
+    if (s[granularity]?.openAtStartup) {
+      return { granularity };
+    }
+  }
+  return null;
+}
+
+export function clearStartupNote(settings: ISettings): ISettings {
+  for (const granularity of granularities) {
+    const config = settings[granularity];
+    if (config?.openAtStartup) {
+      config.openAtStartup = false;
+    }
+  }
+  return settings;
 }

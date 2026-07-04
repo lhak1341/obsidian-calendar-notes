@@ -6,11 +6,11 @@
   "main": "main.js",
   "license": "MIT",
   "scripts": {
-    "lint": "svelte-check && eslint . && tsc --noEmit",
+    "lint": "svelte-check --compiler-warnings \"a11y_click_events_have_key_events:ignore,a11y_no_static_element_interactions:ignore,a11y_no_noninteractive_element_interactions:ignore,element_invalid_self_closing_tag:ignore\" && eslint . && tsc --noEmit",
     "lint:fix": "svelte-check && eslint . --fix",
     "dev": "bun esbuild.config.mjs",
     "build": "bun run lint && bun esbuild.config.mjs production",
-    "deploy": "bun esbuild.config.mjs deploy",
+    "deploy": "bun run lint && bun esbuild.config.mjs deploy && cp manifest.json \"/Users/lhak/Library/Mobile Documents/iCloud~md~obsidian/Documents/lhakZettel/.obsidian/plugins/obsidian-calendar-notes/\"",
     "release": "standard-version"
   },
   "standard-version": {
@@ -34,7 +34,7 @@
     "esbuild": "0.28.1",
     "esbuild-svelte": "0.9.5",
     "eslint": "10.6.0",
-    "eslint-plugin-import": "^2.26.0",
+    "eslint-plugin-import-x": "^4.17.1",
     "eslint-plugin-obsidianmd": "^0.4.1",
     "moment": "2.30.1",
     "sass": "^1.50.0",

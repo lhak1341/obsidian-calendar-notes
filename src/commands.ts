@@ -46,11 +46,7 @@ async function jumpToAdjacentNote(
   const activeFileMeta = plugin.findInCache(activeFile.path);
   if (!activeFileMeta) return;
 
-  const adjacentNoteMeta = plugin.findAdjacent(
-    activeFileMeta.calendarSet,
-    activeFile.path,
-    direction
-  );
+  const adjacentNoteMeta = plugin.findAdjacent(activeFile.path, direction);
 
   if (adjacentNoteMeta) {
     const file = app.vault.getAbstractFileByPath(adjacentNoteMeta.filePath);

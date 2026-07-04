@@ -1,4 +1,5 @@
 import { App, normalizePath, TFile } from "obsidian";
+
 import type { Granularity } from "src/types";
 
 export function removeEscapedCharacters(format: string): string {

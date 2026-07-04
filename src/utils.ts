@@ -3,7 +3,7 @@ import { normalizePath, App, Notice, Platform, TFile } from "obsidian";
 
 import { getFormat } from "./calendarSet";
 import { HUMANIZE_FORMAT } from "./constants";
-import type { CalendarSet, Granularity, PeriodicConfig, PeriodicNoteCachedMetadata } from "./types";
+import type { Granularity, ISettings, PeriodicConfig, PeriodicNoteCachedMetadata } from "./types";
 
 export function isMetaPressed(e: MouseEvent | KeyboardEvent): boolean {
   return Platform.isMacOS ? e.metaKey : e.ctrlKey;
@@ -128,13 +128,13 @@ export function applyTemplateTransformations(
 export async function applyPeriodicTemplateToFile(
   app: App,
   file: TFile,
-  calendarSet: CalendarSet,
+  settings: ISettings,
   metadata: PeriodicNoteCachedMetadata
 ) {
-  const format = getFormat(calendarSet, metadata.granularity);
+  const format = getFormat(settings, metadata.granularity);
   const templateContents = await getTemplateContents(
     app,
-    calendarSet[metadata.granularity]?.templatePath
+    settings[metadata.granularity]?.templatePath
   );
   const renderedContents = applyTemplateTransformations(
     file.basename,

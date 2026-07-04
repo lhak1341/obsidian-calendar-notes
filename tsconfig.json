@@ -10,7 +10,7 @@
     "strictNullChecks": true,
     "moduleResolution": "node",
     "ignoreDeprecations": "6.0",
-    "lib": ["dom", "es5", "scripthost", "es2015", "es2016"]
+    "lib": ["dom", "es5", "scripthost", "es2015", "es2016", "es2019", "es2020"]
   },
   "include": ["**/*.ts"]
 }

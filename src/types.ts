@@ -27,19 +27,7 @@ export interface PeriodicConfig {
   templatePath?: string;
 }
 
-export interface CalendarSet {
-  id: string;
-  ctime: string;
-
-  day?: PeriodicConfig;
-  week?: PeriodicConfig;
-  month?: PeriodicConfig;
-  quarter?: PeriodicConfig;
-  year?: PeriodicConfig;
-  fiscalYear?: PeriodicConfig;
-}
-
-// --- Settings shape (moved here so calendarSetManager and types can import without cycles) ---
+// --- Settings shape ---
 
 export interface ISettings {
   showGettingStartedBanner: boolean;
@@ -47,13 +35,22 @@ export interface ISettings {
   hasMigratedWeeklyNoteSettings: boolean;
   installedVersion: string;
 
-  activeCalendarSet: string;
-  calendarSets: CalendarSet[];
-
   enableTimelineComplication: boolean;
+
+  // Per-granularity note configs (flat)
+  day?: PeriodicConfig;
+  week?: PeriodicConfig;
+  month?: PeriodicConfig;
+  quarter?: PeriodicConfig;
+  year?: PeriodicConfig;
+
+  // Calendar view settings
+  showWeekNums: boolean;
+  wordsPerDot: number;
+  shouldConfirmBeforeCreate: boolean;
 }
 
-// --- Cache data types (moved here so IPeriodicNoteController can reference them without cycles) ---
+// --- Cache data types ---
 
 export type MatchType = "filename" | "frontmatter" | "date-prefixed";
 
@@ -63,7 +60,6 @@ export interface PeriodicNoteMatchMatchData {
 }
 
 export interface PeriodicNoteCachedMetadata {
-  calendarSet: string;
   filePath: string;
   date: Moment;
   granularity: Granularity;
@@ -75,15 +71,9 @@ export interface PeriodicNoteCachedMetadata {
 
 export interface IOpenOpts {
   inNewSplit?: boolean;
-  calendarSet?: string;
 }
 
 // --- Narrow interfaces replacing the plugin service-locator ---
-
-export interface ICalendarSetSource {
-  getCalendarSets(): CalendarSet[];
-  getActiveId(): string;
-}
 
 export interface IPeriodicNoteController {
   app: App;
@@ -103,18 +93,13 @@ export interface IPeriodicNoteController {
   // cache queries
   findInCache(filePath: string): PeriodicNoteCachedMetadata | null;
   findAdjacent(
-    calendarSet: string,
     filePath: string,
     direction: "forwards" | "backwards"
   ): PeriodicNoteCachedMetadata | null;
   isPeriodic(filePath: string, granularity?: Granularity): boolean;
 
-  // calendar-set queries (delegated from CalendarSetManager)
-  getActiveId(): string;
+  // config queries
   getActiveGranularities(): Granularity[];
   getActiveConfig(granularity: Granularity): PeriodicConfig;
-  getActiveSet(): CalendarSet;
-  getCalendarSets(): CalendarSet[];
   getFormat(granularity: Granularity): string;
-  setActiveSet(id: string): void;
 }

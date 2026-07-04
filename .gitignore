@@ -5,14 +5,8 @@ dist/
 
 .DS_Store
 
-.yarn/*
-!.yarn/cache
-!.yarn/releases
-!.yarn/plugins
-!.yarn/sdks
-!.yarn/versions
-
 .env
+undefined.obsidian/
 
 styles.css
 data.json

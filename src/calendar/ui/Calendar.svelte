@@ -39,6 +39,11 @@
 
   // ── Local state ────────────────────────────────────────────────────────────
   let dotsByDate = $state<Record<string, CalendarDot[]>>({});
+  let refreshTick = $state(0);
+
+  export function refresh() {
+    refreshTick++;
+  }
 
   // ── Derived ────────────────────────────────────────────────────────────────
   // weekdaysShort(true) returns days in locale order starting from configured week start
@@ -64,19 +69,27 @@
 
   // ── Dot computation ────────────────────────────────────────────────────────
   $effect(() => {
+    void refreshTick;
     if (sources.length === 0) return;
 
-    const allDays = weeks.flatMap((w) => w.days);
     const newDots: Record<string, CalendarDot[]> = {};
 
-    Promise.all(
-      allDays.map(async (date) => {
-        const key = dayUID(date);
+    const dayPromises = weeks
+      .flatMap((w: { weekNum: number; days: Moment[] }) => w.days)
+      .map(async (date: Moment) => {
         const note = getNoteForDate(date);
         const results = await Promise.all(sources.map((s) => s.getDots(date, note)));
-        newDots[key] = results.flat();
-      })
-    ).then(() => {
+        newDots[dayUID(date)] = (results as CalendarDot[][]).flat();
+      });
+
+    const weekPromises = weeks.map(async (w: { weekNum: number; days: Moment[] }) => {
+      const weekDate = w.days[0];
+      const note = getNoteForWeek(weekDate);
+      const results = await Promise.all(sources.map((s) => s.getDots(weekDate, note)));
+      newDots[weekUID(weekDate)] = (results as CalendarDot[][]).flat();
+    });
+
+    Promise.all([...dayPromises, ...weekPromises]).then(() => {
       dotsByDate = newDots;
     });
   });
@@ -91,6 +104,9 @@
   }, 60_000);
 
   onDestroy(() => clearInterval(heartbeat));
+
+  // Locale-aware "Today" label (e.g. "Today", "Aujourd'hui", etc.)
+  const todayDisplayStr = today.calendar().split(/\d|\s/)[0];
 
   // ── Helpers ────────────────────────────────────────────────────────────────
   function isMeta(e: MouseEvent): boolean {
@@ -110,26 +126,34 @@
   }
 </script>
 
-<div class="calendar-container">
+<div id="calendar-container" class="container">
   <!-- Navigation -->
-  <div class="calendar-nav">
+  <div class="nav">
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <!-- svelte-ignore a11y_click_events_have_key_events -->
-    <h3 class="calendar-title" onclick={resetMonth}>
-      <span class="calendar-month">{displayedMonth.format("MMM")}</span>
-      <span class="calendar-year">{displayedMonth.format("YYYY")}</span>
+    <h3 class="title" onclick={resetMonth}>
+      <span class="month">{displayedMonth.format("MMM")}</span>
+      <span class="year">{displayedMonth.format("YYYY")}</span>
     </h3>
-    <div class="calendar-nav-right">
-      <button class="calendar-nav-btn clickable-icon" onclick={prevMonth} aria-label="Previous month">‹</button>
-      <button class="calendar-nav-btn" onclick={resetMonth} aria-label="Go to today">Today</button>
-      <button class="calendar-nav-btn clickable-icon" onclick={nextMonth} aria-label="Next month">›</button>
+    <div class="right-nav">
+      <div class="arrow" onclick={prevMonth} aria-label="Previous month" role="button" tabindex="0">
+        <svg focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512">
+          <path fill="currentColor" d="M34.52 239.03L228.87 44.69c9.37-9.37 24.57-9.37 33.94 0l22.67 22.67c9.36 9.36 9.37 24.52.04 33.9L131.49 256l154.02 154.75c9.34 9.38 9.32 24.54-.04 33.9l-22.67 22.67c-9.37 9.37-24.57 9.37-33.94 0L34.52 272.97c-9.37-9.37-9.37-24.57 0-33.94z"></path>
+        </svg>
+      </div>
+      <div class="reset-button" onclick={resetMonth} role="button" tabindex="0">{todayDisplayStr}</div>
+      <div class="arrow right" onclick={nextMonth} aria-label="Next month" role="button" tabindex="0">
+        <svg focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512">
+          <path fill="currentColor" d="M34.52 239.03L228.87 44.69c9.37-9.37 24.57-9.37 33.94 0l22.67 22.67c9.36 9.36 9.37 24.52.04 33.9L131.49 256l154.02 154.75c9.34 9.38 9.32 24.54-.04 33.9l-22.67 22.67c-9.37 9.37-24.57 9.37-33.94 0L34.52 272.97c-9.37-9.37-9.37-24.57 0-33.94z"></path>
+        </svg>
+      </div>
     </div>
   </div>
 
   <!-- Grid -->
   <table class="calendar">
     <colgroup>
-      {#if showWeekNums}<col class="weeknum-col" />{/if}
+      {#if showWeekNums}<col />{/if}
       {#each weekdays as _}<col />{/each}
     </colgroup>
     <thead>
@@ -144,10 +168,10 @@
           {#if showWeekNums}
             {@const weekDate = week.days[0]}
             {@const wDots = dotsByDate[weekUID(weekDate)] ?? []}
-            <td>
+            <td class="weeknum-td">
               <!-- svelte-ignore a11y_no_static_element_interactions -->
               <div
-                class="calendar-weeknum"
+                class="week-num"
                 class:active={selectedId === weekUID(weekDate)}
                 onclick={(e) => onClickWeek?.(weekDate.clone().weekday(0), isMeta(e))}
                 oncontextmenu={(e) => { e.preventDefault(); onContextMenuWeek?.(weekDate, e); }}
@@ -159,7 +183,11 @@
                 {week.weekNum}
                 <div class="dot-container">
                   {#each wDots as dot}
-                    <svg class="dot" class:filled={dot.isFilled} viewBox="0 0 6 6" xmlns="http://www.w3.org/2000/svg"><circle cx="3" cy="3" r="2" /></svg>
+                    {#if dot.isFilled}
+                      <svg class="dot filled" viewBox="0 0 6 6" xmlns="http://www.w3.org/2000/svg"><circle cx="3" cy="3" r="2" /></svg>
+                    {:else}
+                      <svg class="hollow" viewBox="0 0 6 6" xmlns="http://www.w3.org/2000/svg"><circle cx="3" cy="3" r="2" /></svg>
+                    {/if}
                   {/each}
                 </div>
               </div>
@@ -171,7 +199,7 @@
             <td>
               <!-- svelte-ignore a11y_no_static_element_interactions -->
               <div
-                class="calendar-day"
+                class="day"
                 class:today={date.isSame(today, "day")}
                 class:active={selectedId === dayUID(date)}
                 class:adjacent-month={!date.isSame(displayedMonth, "month")}
@@ -185,7 +213,11 @@
                 {date.format("D")}
                 <div class="dot-container">
                   {#each dDots as dot}
-                    <svg class="dot" class:filled={dot.isFilled} viewBox="0 0 6 6" xmlns="http://www.w3.org/2000/svg"><circle cx="3" cy="3" r="2" /></svg>
+                    {#if dot.isFilled}
+                      <svg class="dot filled" viewBox="0 0 6 6" xmlns="http://www.w3.org/2000/svg"><circle cx="3" cy="3" r="2" /></svg>
+                    {:else}
+                      <svg class="hollow" viewBox="0 0 6 6" xmlns="http://www.w3.org/2000/svg"><circle cx="3" cy="3" r="2" /></svg>
+                    {/if}
                   {/each}
                 </div>
               </div>
@@ -198,8 +230,12 @@
 </div>
 
 <style>
-  .calendar-container {
+  .container {
+    --color-background-day: transparent;
+    --color-background-weeknum: transparent;
     --color-dot: var(--text-muted);
+    --color-arrow: var(--text-muted);
+    --color-button: var(--text-muted);
     --color-text-title: var(--text-normal);
     --color-text-heading: var(--text-muted);
     --color-text-day: var(--text-normal);
@@ -209,62 +245,70 @@
   }
 
   /* Navigation */
-  .calendar-nav {
+  .nav {
     align-items: center;
     display: flex;
     margin: 0.6em 0 1em;
+    padding: 0 8px;
+    width: 100%;
   }
 
-  .calendar-title {
+  .title {
     color: var(--color-text-title);
     cursor: pointer;
     font-size: 1.5em;
     margin: 0;
   }
 
-  .calendar-month {
+  .month {
     font-weight: 500;
     text-transform: capitalize;
   }
 
-  .calendar-year {
+  .year {
     color: var(--interactive-accent);
   }
 
-  .calendar-nav-right {
+  .right-nav {
     display: flex;
-    align-items: center;
+    justify-content: center;
     margin-left: auto;
   }
 
-  .calendar-nav-btn {
-    background: none;
-    border: none;
-    border-radius: 4px;
-    color: var(--text-muted);
+  .reset-button {
     cursor: pointer;
+    border-radius: 4px;
+    color: var(--color-button);
     font-size: 0.7em;
     font-weight: 600;
     letter-spacing: 1px;
-    margin: 0 2px;
-    padding: 2px 6px;
+    margin: 0 4px;
+    padding: 0 4px;
     text-transform: uppercase;
   }
 
-  .calendar-nav-btn.clickable-icon {
-    font-size: 1.4em;
-    font-weight: 300;
-    padding: 0 4px;
+  .arrow {
+    align-items: center;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    width: 24px;
+  }
+
+  .arrow.right {
+    transform: rotate(180deg);
+  }
+
+  .arrow svg {
+    color: var(--color-arrow);
+    height: 16px;
+    width: 16px;
   }
 
   /* Table */
   .calendar {
     border-collapse: collapse;
     width: 100%;
-  }
-
-  .weeknum-col {
-    border-right: 1px solid var(--background-modifier-border);
   }
 
   th {
@@ -278,64 +322,72 @@
   }
 
   /* Day cells */
-  .calendar-day {
+  .day {
+    background-color: var(--color-background-day);
     border-radius: 4px;
     color: var(--color-text-day);
     cursor: pointer;
     font-size: 0.8em;
+    height: 100%;
     padding: 4px;
+    position: relative;
     text-align: center;
     transition: background-color 0.1s ease-in, color 0.1s ease-in;
+    vertical-align: baseline;
   }
 
-  .calendar-day:hover {
+  .day:hover {
     background-color: var(--interactive-hover);
   }
 
-  .calendar-day.adjacent-month {
+  .day.adjacent-month {
     opacity: 0.25;
   }
 
-  .calendar-day.today {
+  .day.today {
     color: var(--color-text-today);
   }
 
-  .calendar-day.active,
-  .calendar-day.active.today {
+  .day:active,
+  .day.active,
+  .day.active.today {
     background-color: var(--interactive-accent);
     color: var(--text-on-accent);
   }
 
-  .calendar-day.active:hover {
+  .day.active:hover {
     background-color: var(--interactive-accent-hover);
   }
 
   /* Week number cells */
-  td:first-child .calendar-weeknum {
+  .weeknum-td {
     border-right: 1px solid var(--background-modifier-border);
   }
 
-  .calendar-weeknum {
+  .week-num {
+    background-color: var(--color-background-weeknum);
     border-radius: 4px;
     color: var(--color-text-weeknum);
     cursor: pointer;
     font-size: 0.65em;
+    height: 100%;
     padding: 4px;
     text-align: center;
     transition: background-color 0.1s ease-in, color 0.1s ease-in;
+    vertical-align: baseline;
   }
 
-  .calendar-weeknum:hover {
+  .week-num:hover {
     background-color: var(--interactive-hover);
   }
 
-  .calendar-weeknum.active {
-    background-color: var(--interactive-accent);
-    color: var(--text-on-accent);
+  .week-num.active:hover {
+    background-color: var(--interactive-accent-hover);
   }
 
-  .calendar-weeknum.active:hover {
-    background-color: var(--interactive-accent-hover);
+  .week-num.active {
+    background-color: var(--interactive-accent);
+    color: var(--text-on-accent);
   }
 
   /* Dots */
@@ -347,26 +399,29 @@
     min-height: 6px;
   }
 
-  .dot {
+  .dot,
+  .hollow {
     display: inline-block;
-    fill: none;
     height: 6px;
     margin: 0 1px;
-    stroke: var(--color-dot);
     width: 6px;
   }
 
   .dot.filled {
     fill: var(--color-dot);
-    stroke: none;
-  }
-
-  .active .dot {
-    stroke: var(--text-on-accent);
   }
 
   .active .dot.filled {
     fill: var(--text-on-accent);
-    stroke: none;
+  }
+
+  .hollow {
+    fill: none;
+    stroke: var(--color-dot);
+  }
+
+  .active .hollow {
+    fill: none;
+    stroke: var(--text-on-accent);
   }
 </style>

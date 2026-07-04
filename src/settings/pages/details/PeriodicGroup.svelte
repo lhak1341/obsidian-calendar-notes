@@ -16,31 +16,18 @@
   import OpenAtStartupSetting from "src/settings/components/OpenAtStartupSetting.svelte";
 
   export let app: App;
-  export let calendarSetId: string;
   export let granularity: Granularity;
   export let settings: Writable<ISettings>;
 
   let displayConfig = displayConfigs[granularity];
   let isExpanded = true;
 
-  let calendarSet = writableDerived(
-    settings,
-    ($settings) =>
-      $settings.calendarSets.find((set) => set.id === calendarSetId)!,
-    (reflecting, $settings) => {
-      const idx = $settings.calendarSets.findIndex(
-        (set) => set.id === calendarSetId
-      );
-      $settings.calendarSets[idx] = reflecting;
-      return $settings;
-    }
-  );
   let config = writableDerived(
-    calendarSet,
-    ($calendarSet) => $calendarSet?.[granularity] ?? DEFAULT_PERIODIC_CONFIG,
-    (reflecting, $calendarSet) => {
-      $calendarSet[granularity] = reflecting;
-      return $calendarSet;
+    settings,
+    ($settings) => $settings[granularity] ?? { ...DEFAULT_PERIODIC_CONFIG },
+    (reflecting, $settings) => {
+      $settings[granularity] = reflecting;
+      return $settings;
     }
   );
 
