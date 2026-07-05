@@ -1,26 +1,22 @@
 <script lang="ts">
   import { App } from "obsidian";
-  import { slide } from "svelte/transition";
-  import capitalize from "lodash/capitalize";
+  import type { Writable } from "svelte/store";
+  import writableDerived from "svelte-writable-derived";
 
   import { displayConfigs } from "src/commands";
   import NoteFormatSetting from "src/settings/components/NoteFormatSetting.svelte";
   import NoteTemplateSetting from "src/settings/components/NoteTemplateSetting.svelte";
   import NoteFolderSetting from "src/settings/components/NoteFolderSetting.svelte";
+  import SettingItem from "src/settings/components/SettingItem.svelte";
+  import Toggle from "src/settings/components/Toggle.svelte";
   import type { Granularity } from "src/types";
-  import Arrow from "src/settings/components/Arrow.svelte";
   import { DEFAULT_PERIODIC_CONFIG } from "src/settings/defaults";
   import type { ISettings } from "src/types";
-  import type { Writable } from "svelte/store";
-  import writableDerived from "svelte-writable-derived";
   import OpenAtStartupSetting from "src/settings/components/OpenAtStartupSetting.svelte";
 
   export let app: App;
   export let granularity: Granularity;
   export let settings: Writable<ISettings>;
-
-  let displayConfig = displayConfigs[granularity];
-  let isExpanded = true;
 
   let config = writableDerived(
     settings,
@@ -30,91 +26,34 @@
       return $settings;
     }
   );
-
-  function toggleExpand() {
-    isExpanded = !isExpanded;
-  }
 </script>
 
 <div class="periodic-group">
-  <div
-    class="setting-item setting-item-heading periodic-group-heading"
-    on:click={toggleExpand}
+  <SettingItem
+    name="Enabled"
+    description="Create and open {displayConfigs[granularity].periodicity} notes"
+    type="toggle"
+    isHeading={false}
   >
-    <div class="setting-item-info">
-      <h3 class="setting-item-name periodic-group-title">
-        <Arrow {isExpanded} />
-        {capitalize(displayConfig.periodicity)} Notes
-        {#if $config.openAtStartup}
-          <span class="badge">Opens at startup</span>
-        {/if}
-      </h3>
-    </div>
-    <div class="setting-item-control">
-      <label
-        class="checkbox-container"
-        class:is-enabled={$config.enabled}
-        on:click|stopPropagation
-      >
-        <input
-          type="checkbox"
-          bind:checked={$config.enabled}
-        />
-      </label>
-    </div>
-  </div>
-  {#if isExpanded}
-    <div
-      class="periodic-group-content"
-      in:slide={{ duration: 300 }}
-      out:slide={{ duration: 300 }}
-    >
-      <NoteFormatSetting {config} {granularity} />
-      <NoteFolderSetting {app} {config} {granularity} />
-      <NoteTemplateSetting {app} {config} {granularity} />
-      <OpenAtStartupSetting {config} {settings} {granularity} />
-    </div>
-  {/if}
+    <Toggle
+      slot="control"
+      isEnabled={$config.enabled}
+      onChange={(val) => {
+        $config.enabled = val;
+      }}
+    />
+  </SettingItem>
+  <NoteFormatSetting {config} {granularity} />
+  <NoteFolderSetting {app} {config} {granularity} />
+  <NoteTemplateSetting {app} {config} {granularity} />
+  <OpenAtStartupSetting {config} {settings} {granularity} />
 </div>
 
 <style lang="scss">
-  .periodic-group-title {
-    display: flex;
-  }
-
-  .badge {
-    font-style: italic;
-    margin-left: 1em;
-    color: var(--text-muted);
-    font-weight: 500;
-    font-size: 70%;
-  }
-
   .periodic-group {
     background: var(--background-primary-alt);
     border: 1px solid var(--background-modifier-border);
-    border-radius: 16px;
-
-    &:not(:last-of-type) {
-      margin-bottom: 24px;
-    }
-  }
-
-  .periodic-group-heading {
-    cursor: pointer;
-    padding: 24px;
-
-    h3 {
-      font-size: 1.1em;
-      margin: 0;
-    }
-  }
-
-  .periodic-group-content {
-    padding: 24px;
-  }
-
-  .checkbox-container input[type="checkbox"] {
-    display: none;
+    border-radius: 12px;
+    overflow: hidden;
   }
 </style>

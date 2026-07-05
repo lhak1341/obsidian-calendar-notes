@@ -4,10 +4,10 @@
   import type { TFile } from "obsidian";
   import { onDestroy, onMount, untrack } from "svelte";
 
-  import { createStreakSource } from "../sources/streak";
   import { createWordCountSource } from "../sources/wordCount";
   import type { IPeriodicNoteController, ISettings } from "src/types";
   import Calendar from "./Calendar.svelte";
+  import { openWithConfirm } from "./openWithConfirm";
   import { dayUID, weekUID } from "./types";
 
   // ── Props ──────────────────────────────────────────────────────────────────
@@ -29,10 +29,7 @@
   });
 
   // ── Dot sources ────────────────────────────────────────────────────────────
-  const sources = $derived([
-    createWordCountSource(p.app.vault, () => wordsPerDot),
-    createStreakSource(),
-  ]);
+  const sources = $derived([createWordCountSource(p.app.vault, () => wordsPerDot)]);
 
   // ── Selected day tracking ──────────────────────────────────────────────────
   let selectedId = $state("");
@@ -83,23 +80,13 @@
 
   // ── Click handlers ─────────────────────────────────────────────────────────
   async function handleClickDay(date: Moment, inNewSplit: boolean) {
-    const exists = !!plugin.getPeriodicNote("day", date);
-    if (!exists && shouldConfirmBeforeCreate) {
-      const ok = window.confirm(`Create daily note for ${date.format("YYYY-MM-DD")}?`);
-      if (!ok) return;
-    }
-    await plugin.openPeriodicNote("day", date, { inNewSplit });
-    selectedId = dayUID(date);
+    if (await openWithConfirm("day", date, plugin, shouldConfirmBeforeCreate, { inNewSplit }))
+      selectedId = dayUID(date);
   }
 
   async function handleClickWeek(date: Moment, inNewSplit: boolean) {
-    const exists = !!plugin.getPeriodicNote("week", date);
-    if (!exists && shouldConfirmBeforeCreate) {
-      const ok = window.confirm(`Create weekly note for ${date.format("[W]WW GGGG")}?`);
-      if (!ok) return;
-    }
-    await plugin.openPeriodicNote("week", date, { inNewSplit });
-    selectedId = weekUID(date);
+    if (await openWithConfirm("week", date, plugin, shouldConfirmBeforeCreate, { inNewSplit }))
+      selectedId = weekUID(date);
   }
 
   // ── Context menus ──────────────────────────────────────────────────────────

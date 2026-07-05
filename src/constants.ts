@@ -15,6 +15,8 @@ export const DEFAULT_FORMAT = Object.freeze({
 });
 
 export const HUMANIZE_FORMAT = Object.freeze({
+  day: "YYYY-MM-DD",
+  week: "[W]WW GGGG",
   month: "MMMM YYYY",
   quarter: "YYYY Q[Q]",
   year: "YYYY",
