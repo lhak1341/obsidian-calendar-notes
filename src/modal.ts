@@ -1,10 +1,10 @@
 import { App, Menu, Modal, type Point } from "obsidian";
 
 import { displayConfigs } from "./commands";
-import type { IPeriodicNoteController } from "./types";
+import type { INoteOps } from "./types";
 
 export function showFileMenu(
-  plugin: IPeriodicNoteController,
+  plugin: INoteOps,
   position: Point
 ): void {
   const contextMenu = new Menu();
@@ -24,7 +24,7 @@ export function showFileMenu(
   contextMenu.showAtPosition(position);
 }
 export class PeriodicNoteCreateModal extends Modal {
-  constructor(app: App, readonly plugin: IPeriodicNoteController) {
+  constructor(app: App, readonly plugin: INoteOps) {
     super(app);
 
     this.contentEl.addClass("periodic-modal");

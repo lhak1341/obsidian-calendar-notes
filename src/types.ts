@@ -75,31 +75,32 @@ export interface IOpenOpts {
 
 // --- Narrow interfaces replacing the plugin service-locator ---
 
-export interface IPeriodicNoteController {
-  app: App;
-  registerEvent(eventRef: EventRef): void;
+export interface INoteOps {
   settings: Readable<ISettings>;
 
-  // note operations
   openPeriodicNote(granularity: Granularity, date: Moment, opts?: IOpenOpts): Promise<void>;
   getPeriodicNote(granularity: Granularity, date: Moment): TFile | null;
-  getPeriodicNotes(
-    granularity: Granularity,
-    date: Moment,
-    includeFinerGranularities?: boolean
-  ): PeriodicNoteCachedMetadata[];
   createPeriodicNote(granularity: Granularity, date: Moment): Promise<TFile>;
+  getActiveGranularities(): Granularity[];
+  getActiveConfig(granularity: Granularity): PeriodicConfig;
+  getFormat(granularity: Granularity): string;
+}
 
-  // cache queries
+export interface INoteIndex {
   findInCache(filePath: string): PeriodicNoteCachedMetadata | null;
   findAdjacent(
     filePath: string,
     direction: "forwards" | "backwards"
   ): PeriodicNoteCachedMetadata | null;
   isPeriodic(filePath: string, granularity?: Granularity): boolean;
+  getPeriodicNotes(
+    granularity: Granularity,
+    date: Moment,
+    includeFinerGranularities?: boolean
+  ): PeriodicNoteCachedMetadata[];
+}
 
-  // config queries
-  getActiveGranularities(): Granularity[];
-  getActiveConfig(granularity: Granularity): PeriodicConfig;
-  getFormat(granularity: Granularity): string;
+export interface IPeriodicNoteController extends INoteOps, INoteIndex {
+  app: App;
+  registerEvent(eventRef: EventRef): void;
 }

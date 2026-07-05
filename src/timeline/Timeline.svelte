@@ -2,7 +2,6 @@
   import type { Moment } from "moment";
   import { fly } from "svelte/transition";
 
-  import type { PeriodicNotesCache } from "src/cache";
   import type { PeriodicNoteCachedMetadata } from "src/types";
   import { MarkdownView } from "obsidian";
   import { get } from "svelte/store";
@@ -12,7 +11,6 @@
   import RelativeIcon from "./RelativeIcon.svelte";
 
   export let plugin: IPeriodicNoteController;
-  export let cache: PeriodicNotesCache;
   export let view: MarkdownView;
 
   let showTimeline = false;
@@ -25,7 +23,7 @@
   let showComplication = get(settings)?.enableTimelineComplication ?? false;
 
   $: {
-    periodicData = cache.find(view.file?.path);
+    periodicData = view.file ? plugin.findInCache(view.file.path) : null;
 
     if (periodicData) {
       weekDays = generateWeekdays(today, periodicData.date);
@@ -67,7 +65,7 @@
   }
 
   function updateView() {
-    periodicData = cache.find(view.file?.path);
+    periodicData = view.file ? plugin.findInCache(view.file.path) : null;
 
     if (periodicData) {
       weekDays = generateWeekdays(today, periodicData.date);

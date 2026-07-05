@@ -1,7 +1,7 @@
 import type { Moment } from "moment";
 import { normalizePath, App, Notice, Platform, TFile } from "obsidian";
 
-import { getFormat } from "./calendarSet";
+import { configFor } from "./calendarSet";
 import { HUMANIZE_FORMAT } from "./constants";
 import type { Granularity, ISettings, PeriodicConfig, PeriodicNoteCachedMetadata } from "./types";
 
@@ -131,16 +131,13 @@ export async function applyPeriodicTemplateToFile(
   settings: ISettings,
   metadata: PeriodicNoteCachedMetadata
 ) {
-  const format = getFormat(settings, metadata.granularity);
-  const templateContents = await getTemplateContents(
-    app,
-    settings[metadata.granularity]?.templatePath
-  );
+  const cfg = configFor(settings, metadata.granularity);
+  const templateContents = await getTemplateContents(app, cfg.config.templatePath);
   const renderedContents = applyTemplateTransformations(
     file.basename,
     metadata.granularity,
     metadata.date,
-    format,
+    cfg.format,
     templateContents
   );
   return app.vault.process(file, () => renderedContents);

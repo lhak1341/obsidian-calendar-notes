@@ -11,7 +11,7 @@ import {
 } from "obsidian";
 import { get, type Readable } from "svelte/store";
 
-import { getPossibleFormats } from "./calendarSet";
+import { configFor } from "./calendarSet";
 import { DEFAULT_CALENDARSET_ID } from "./constants";
 import { DEFAULT_FORMAT } from "./constants";
 import { getLooselyMatchedDate } from "./parser";
@@ -139,12 +139,11 @@ export class PeriodicNotesCache extends Component {
     granularity: Granularity,
     reason: "create" | "rename" | "initialize"
   ): boolean {
-    const folder = settings[granularity]?.folder || "";
-    if (!file.path.startsWith(folder)) return false;
+    const cfg = configFor(settings, granularity);
+    if (!file.path.startsWith(cfg.folder)) return false;
 
-    const formats = getPossibleFormats(settings, granularity);
-    const dateInputStr = getDateInput(file, formats[0], granularity);
-    const date = window.moment(dateInputStr, formats, true);
+    const dateInputStr = getDateInput(file, cfg.possibleFormats[0], granularity);
+    const date = window.moment(dateInputStr, cfg.possibleFormats, true);
     if (!date.isValid()) return false;
 
     const metadata: PeriodicNoteCachedMetadata = {

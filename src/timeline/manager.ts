@@ -1,7 +1,6 @@
 import { App, Component, MarkdownView } from "obsidian";
 import { mount, unmount } from "svelte";
 
-import { PeriodicNotesCache } from "src/cache";
 import type { IPeriodicNoteController } from "src/types";
 
 import Timeline from "./Timeline.svelte";
@@ -13,7 +12,6 @@ export default class TimelineManager {
   constructor(
     readonly app: App,
     readonly component: Component,
-    readonly cache: PeriodicNotesCache,
     readonly plugin: IPeriodicNoteController
   ) {
     this.app.workspace.onLayoutReady(() => {
@@ -54,7 +52,7 @@ export default class TimelineManager {
           container,
           mount(Timeline, {
             target: container,
-            props: { plugin: this.plugin, cache: this.cache, view },
+            props: { plugin: this.plugin, view },
           })
         );
       }

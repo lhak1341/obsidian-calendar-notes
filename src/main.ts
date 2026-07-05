@@ -5,7 +5,7 @@ import { get, writable, type Writable } from "svelte/store";
 import { PeriodicNotesCache } from "./cache";
 import { VIEW_TYPE_CALENDAR } from "./calendar/constants";
 import { CalendarView } from "./calendar/view";
-import { getConfig, getFormat } from "./calendarSet";
+import { configFor } from "./calendarSet";
 import { displayConfigs, getCommands } from "./commands";
 import {
   calendarDayIcon,
@@ -111,7 +111,7 @@ export default class PeriodicNotesPlugin extends Plugin implements IPeriodicNote
 
     this.ribbonEl = null;
     this.cache = new PeriodicNotesCache(this.app, this.settings);
-    this.timelineManager = new TimelineManager(this.app, this, this.cache, this);
+    this.timelineManager = new TimelineManager(this.app, this, this);
 
     this.openPeriodicNote = this.openPeriodicNote.bind(this);
     this.settingsTab = new PeriodicNotesSettingsTab(this.app, this);
@@ -290,18 +290,17 @@ export default class PeriodicNotesPlugin extends Plugin implements IPeriodicNote
     date: Moment
   ): Promise<TFile> {
     const s = get(this.settings);
-    const config = getConfig(s, granularity);
-    const format = getFormat(s, granularity);
-    const filename = date.format(format);
-    const templateContents = await getTemplateContents(this.app, config.templatePath);
+    const cfg = configFor(s, granularity);
+    const filename = date.format(cfg.format);
+    const templateContents = await getTemplateContents(this.app, cfg.config.templatePath);
     const renderedContents = applyTemplateTransformations(
       filename,
       granularity,
       date,
-      format,
+      cfg.format,
       templateContents
     );
-    const destPath = await getNoteCreationPath(this.app, filename, config);
+    const destPath = await getNoteCreationPath(this.app, filename, cfg.config);
     return this.app.vault.create(destPath, renderedContents);
   }
 
@@ -354,10 +353,10 @@ export default class PeriodicNotesPlugin extends Plugin implements IPeriodicNote
   }
 
   public getActiveConfig(granularity: Granularity): PeriodicConfig {
-    return getConfig(get(this.settings), granularity);
+    return configFor(get(this.settings), granularity).config;
   }
 
   public getFormat(granularity: Granularity): string {
-    return getFormat(get(this.settings), granularity);
+    return configFor(get(this.settings), granularity).format;
   }
 }

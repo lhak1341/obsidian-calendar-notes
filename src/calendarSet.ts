@@ -3,33 +3,32 @@ import { DEFAULT_PERIODIC_CONFIG } from "./settings/defaults";
 import { removeEscapedCharacters } from "./settings/validation";
 import type { Granularity, ISettings, PeriodicConfig } from "./types";
 
-export function getFormat(settings: ISettings, granularity: Granularity): string {
-  return settings[granularity]?.format || DEFAULT_FORMAT[granularity];
-}
-
 /**
- * When matching file formats, users can specify `YYYY/YYYY-MM-DD`. We should look for
- * paths that match either `YYYY/YYYY-MM-DD` exactly, or just `YYYY-MM-DD` in case
- * users move the file later.
+ * Derive all note-config values from (settings, granularity) in one call.
+ *
+ * possibleFormats: when a user sets `YYYY/YYYY-MM-DD`, the cache must also
+ * accept the bare `YYYY-MM-DD` basename in case the file was moved.
  */
-export function getPossibleFormats(settings: ISettings, granularity: Granularity): string[] {
-  const format = settings[granularity]?.format;
-  if (!format) return [DEFAULT_FORMAT[granularity]];
+export function configFor(settings: ISettings, granularity: Granularity) {
+  const config: PeriodicConfig = settings[granularity] ?? DEFAULT_PERIODIC_CONFIG;
+  const userFormat = settings[granularity]?.format;
+  const format = userFormat || DEFAULT_FORMAT[granularity];
 
-  const partialFormatExp = /[^/]*$/.exec(format);
-  if (partialFormatExp) {
-    const partialFormat = partialFormatExp[0];
-    return [format, partialFormat];
+  let possibleFormats: string[];
+  if (!userFormat) {
+    possibleFormats = [DEFAULT_FORMAT[granularity]];
+  } else {
+    const partial = /[^/]*$/.exec(format);
+    possibleFormats = partial ? [format, partial[0]] : [format];
   }
-  return [format];
-}
 
-export function getFolder(settings: ISettings, granularity: Granularity): string {
-  return settings[granularity]?.folder || "/";
-}
-
-export function getConfig(settings: ISettings, granularity: Granularity): PeriodicConfig {
-  return settings[granularity] ?? DEFAULT_PERIODIC_CONFIG;
+  return {
+    format,
+    folder: config.folder,
+    possibleFormats,
+    isIso: isIsoFormat(format),
+    config,
+  };
 }
 
 export function isIsoFormat(format: string): boolean {

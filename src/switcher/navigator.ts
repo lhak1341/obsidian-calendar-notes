@@ -6,7 +6,7 @@ import { DEFAULT_FORMAT } from "src/constants";
 import type { MatchType } from "src/types";
 import { getRelativeDate, isMetaPressed, join } from "src/utils";
 
-import type { Granularity, IPeriodicNoteController } from "../types";
+import type { Granularity, INoteIndex, INoteOps } from "../types";
 
 export interface DateNavigationItem {
   granularity: Granularity;
@@ -28,7 +28,7 @@ const NAVIGATOR_INSTRUCTIONS = [
 export class NLDNavigator extends SuggestModal<DateNavigationItem> {
   private nlDatesPlugin: NLDatesPlugin;
 
-  constructor(readonly app: App, readonly plugin: IPeriodicNoteController) {
+  constructor(readonly app: App, readonly plugin: INoteOps & INoteIndex) {
     super(app);
 
     this.setInstructions(NAVIGATOR_INSTRUCTIONS);
@@ -242,7 +242,7 @@ export class RelatedFilesSwitcher extends SuggestModal<DateNavigationItem> {
 
   constructor(
     readonly app: App,
-    readonly plugin: IPeriodicNoteController,
+    readonly plugin: INoteOps & INoteIndex,
     readonly selectedItem: DateNavigationItem,
     readonly oldQuery: string
   ) {
