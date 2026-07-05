@@ -3,7 +3,6 @@ import type { TFile } from "obsidian";
 
 export interface CalendarDot {
   isFilled: boolean;
-  color?: string;
 }
 
 export interface DotSource {

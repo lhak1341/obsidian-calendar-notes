@@ -27,6 +27,7 @@ export const DEFAULT_SETTINGS: ISettings = {
 
   // Calendar view
   showWeekNums: false,
+  useJapaneseWeekdays: false,
   wordsPerDot: 250,
   shouldConfirmBeforeCreate: true,
 };

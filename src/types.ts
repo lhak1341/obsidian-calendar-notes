@@ -46,6 +46,7 @@ export interface ISettings {
 
   // Calendar view settings
   showWeekNums: boolean;
+  useJapaneseWeekdays: boolean;
   wordsPerDot: number;
   shouldConfirmBeforeCreate: boolean;
 }

@@ -75,6 +75,20 @@
     }}
   />
 </SettingItem>
+<SettingItem
+  name="Japanese weekday labels"
+  description="Show weekdays as single kanji characters (日/月/火/水/木/金/土)"
+  type="toggle"
+  isHeading={false}
+>
+  <Toggle
+    slot="control"
+    isEnabled={$settings.useJapaneseWeekdays ?? false}
+    onChange={(val) => {
+      $settings.useJapaneseWeekdays = val;
+    }}
+  />
+</SettingItem>
 
 <SettingItem
   name="Confirm before creating note"

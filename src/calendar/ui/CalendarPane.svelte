@@ -19,11 +19,13 @@
 
   // ── Settings ───────────────────────────────────────────────────────────────
   let showWeekNums = $state(false);
+  let useJapaneseWeekdays = $state(false);
   let wordsPerDot = $state(250);
   let shouldConfirmBeforeCreate = $state(true);
 
   const unsubSettings = p.settings.subscribe((s: ISettings) => {
     showWeekNums = s.showWeekNums ?? false;
+    useJapaneseWeekdays = s.useJapaneseWeekdays ?? false;
     wordsPerDot = s.wordsPerDot ?? 250;
     shouldConfirmBeforeCreate = s.shouldConfirmBeforeCreate ?? true;
   });
@@ -133,6 +135,7 @@
   bind:this={calendarRef}
   {selectedId}
   {showWeekNums}
+  {useJapaneseWeekdays}
   {sources}
   {getNoteForDate}
   {getNoteForWeek}

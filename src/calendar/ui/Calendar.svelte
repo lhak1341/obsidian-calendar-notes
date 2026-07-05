@@ -12,6 +12,7 @@
     today = $bindable(window.moment()),
     selectedId = "",
     showWeekNums = false,
+    useJapaneseWeekdays = false,
     sources = [],
     getNoteForDate = (_date: Moment): TFile | null => null,
     getNoteForWeek = (_date: Moment): TFile | null => null,
@@ -26,6 +27,7 @@
     today?: Moment;
     selectedId?: string;
     showWeekNums?: boolean;
+    useJapaneseWeekdays?: boolean;
     sources?: DotSource[];
     getNoteForDate?: (date: Moment) => TFile | null;
     getNoteForWeek?: (date: Moment) => TFile | null;
@@ -46,8 +48,15 @@
   }
 
   // ── Derived ────────────────────────────────────────────────────────────────
-  // weekdaysShort(true) returns days in locale order starting from configured week start
-  const weekdays = $derived(displayedMonth && window.moment.weekdaysShort(true));
+  const JP_DAYS = ["日", "月", "火", "水", "木", "金", "土"] as const;
+  const weekdays = $derived.by(() => {
+    if (!displayedMonth) return [];
+    if (useJapaneseWeekdays) {
+      const first = window.moment.localeData().firstDayOfWeek();
+      return Array.from({ length: 7 }, (_, i) => JP_DAYS[(first + i) % 7]);
+    }
+    return window.moment.weekdaysShort(true);
+  });
 
   const weeks = $derived.by(() => {
     const locale = window.moment().locale();
@@ -132,8 +141,8 @@
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <h3 class="title" onclick={resetMonth}>
-      <span class="month">{displayedMonth.format("MMM")}</span>
       <span class="year">{displayedMonth.format("YYYY")}</span>
+      <span class="month">{displayedMonth.format("MMM")}</span>
     </h3>
     <div class="right-nav">
       <div class="arrow" onclick={prevMonth} aria-label="Previous month" role="button" tabindex="0">
@@ -156,9 +165,9 @@
       {#if showWeekNums}<col />{/if}
       {#each weekdays as _}<col />{/each}
     </colgroup>
-    <thead>
+    <thead class:japanese-weekdays={useJapaneseWeekdays}>
       <tr>
-        {#if showWeekNums}<th>W</th>{/if}
+        {#if showWeekNums}<th></th>{/if}
         {#each weekdays as day}<th>{day}</th>{/each}
       </tr>
     </thead>
@@ -180,7 +189,7 @@
                 tabindex="0"
                 onkeydown={(e) => e.key === "Enter" && onClickWeek?.(weekDate.clone().weekday(0), false)}
               >
-                {week.weekNum}
+                W{String(week.weekNum).padStart(2, "0")}
                 <div class="dot-container">
                   {#each wDots as dot}
                     {#if dot.isFilled}
@@ -233,7 +242,6 @@
   .container {
     --color-background-day: transparent;
     --color-background-weeknum: transparent;
-    --color-dot: var(--text-muted);
     --color-arrow: var(--text-muted);
     --color-button: var(--text-muted);
     --color-text-title: var(--text-normal);
@@ -311,14 +319,18 @@
     width: 100%;
   }
 
-  th {
+  .calendar th {
     background-color: transparent;
     color: var(--color-text-heading);
-    font-size: 0.6em;
-    letter-spacing: 1px;
+    font-size: 0.7em !important;
+    letter-spacing: 0.9px !important;
     padding: 4px;
     text-align: center;
     text-transform: uppercase;
+  }
+
+  .calendar .japanese-weekdays th {
+    font-size: 0.85em !important;
   }
 
   /* Day cells */
@@ -370,6 +382,7 @@
     color: var(--color-text-weeknum);
     cursor: pointer;
     font-size: 0.65em;
+    font-variant-numeric: tabular-nums;
     height: 100%;
     padding: 4px;
     text-align: center;
@@ -408,20 +421,11 @@
   }
 
   .dot.filled {
-    fill: var(--color-dot);
-  }
-
-  .active .dot.filled {
-    fill: var(--text-on-accent);
+    fill: currentColor;
   }
 
   .hollow {
     fill: none;
-    stroke: var(--color-dot);
-  }
-
-  .active .hollow {
-    fill: none;
-    stroke: var(--text-on-accent);
+    stroke: currentColor;
   }
 </style>

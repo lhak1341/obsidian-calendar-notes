@@ -13,3 +13,7 @@
 
 ## Svelte
 - `src/settings/` components use Svelte 4 syntax (`export let`, `$:`); calendar UI uses Svelte 5 runes (`$state`, `$derived`) — don't mix within an area
+
+## Obsidian CSS
+- SVG fill/stroke: use `currentColor` not CSS vars — Obsidian base CSS can override `fill: var(--x)` on SVG elements; `currentColor` inherits from the parent's `color` which Svelte scoped CSS controls reliably
+- Obsidian overrides bare element selectors (e.g. `th`) — use a parent class selector (`.calendar th`) and `!important` on the overridden properties to win the cascade
