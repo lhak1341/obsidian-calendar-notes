@@ -2,6 +2,10 @@
   min-width: 40vw;
 }
 
+.periodic-notes-granularity-section {
+  margin-bottom: var(--size-4-4);
+}
+
 .settings-banner {
   background-color: var(--background-primary-alt);
   border-radius: 8px;

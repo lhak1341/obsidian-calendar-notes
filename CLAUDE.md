@@ -13,7 +13,9 @@
 
 ## Svelte
 - `src/settings/` components use Svelte 4 syntax (`export let`, `$:`); calendar UI uses Svelte 5 runes (`$state`, `$derived`) — don't mix within an area
+- `getSettingDefinitions()` declarative `control: { type, key }` shorthand requires `plugin.settings[key]` to work — incompatible with a Svelte store; use `render` callbacks or override `display()` instead
 
 ## Obsidian CSS
+- Settings cards: `.setting-items` only gets padding/background/radius when inside `.setting-group` — use `containerEl.createDiv("setting-group").createDiv("setting-items")` and pass the inner div to `new Setting(...)` for grouped settings panels
 - SVG fill/stroke: use `currentColor` not CSS vars — Obsidian base CSS can override `fill: var(--x)` on SVG elements; `currentColor` inherits from the parent's `color` which Svelte scoped CSS controls reliably
 - Obsidian overrides bare element selectors (e.g. `th`) — use a parent class selector (`.calendar th`) and `!important` on the overridden properties to win the cascade
