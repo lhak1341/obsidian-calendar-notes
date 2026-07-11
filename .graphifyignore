@@ -13,11 +13,13 @@ data.json
 main.js
 
 .claude/
-temp/
 .fallow/
+temp/
 
-# Graphify
-**/graphify-out/cache/
-**/graphify-out/graph.json
-**/graphify-out/*.html
-!graphify-out/GRAPH_REPORT.md
+# Graphify output
+graphify-out/
+
+# Test infrastructure
+*.test.ts
+*.spec.ts
+__mocks__/

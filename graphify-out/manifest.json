@@ -1,0 +1,166 @@
+{
+  "/Users/lhak/workspace/github.com/lhak1341/obsidian-calendar-notes/svelte.config.js": {
+    "mtime": 1783183420.0764155,
+    "hash": "8769ac68473276e6e7e02dd543521542"
+  },
+  "/Users/lhak/workspace/github.com/lhak1341/obsidian-calendar-notes/esbuild.config.mjs": {
+    "mtime": 1783121432.059666,
+    "hash": "09faf0a6bf07f2c5129ef5378f4cc7f3"
+  },
+  "/Users/lhak/workspace/github.com/lhak1341/obsidian-calendar-notes/eslint.config.js": {
+    "mtime": 1783213399.0341702,
+    "hash": "f976ec37850dece829a1fcbc68324f48"
+  },
+  "/Users/lhak/workspace/github.com/lhak1341/obsidian-calendar-notes/vitest.config.ts": {
+    "mtime": 1783213302.874561,
+    "hash": "d5e71c7932ccb4dc82c0ab8f78461269"
+  },
+  "/Users/lhak/workspace/github.com/lhak1341/obsidian-calendar-notes/src/commands.ts": {
+    "mtime": 1783187786.1046178,
+    "hash": "1fcf67490bc34bb3bdd3d0d34ff8f9d0"
+  },
+  "/Users/lhak/workspace/github.com/lhak1341/obsidian-calendar-notes/src/main.ts": {
+    "mtime": 1783212234.9039252,
+    "hash": "8bb7cb66c85cf1e06b86da8f2624cf85"
+  },
+  "/Users/lhak/workspace/github.com/lhak1341/obsidian-calendar-notes/src/modal.ts": {
+    "mtime": 1783187777.9136417,
+    "hash": "e4c62cdc38bad4d643f5801aad393f71"
+  },
+  "/Users/lhak/workspace/github.com/lhak1341/obsidian-calendar-notes/src/utils.ts": {
+    "mtime": 1783212219.9138768,
+    "hash": "aff063feaecc19bacf386b9281e5ea6b"
+  },
+  "/Users/lhak/workspace/github.com/lhak1341/obsidian-calendar-notes/src/obsidian.d.ts": {
+    "mtime": 1783180602.4760833,
+    "hash": "475fc9b2eddb4bf3048d15c4fcce1910"
+  },
+  "/Users/lhak/workspace/github.com/lhak1341/obsidian-calendar-notes/src/parser.ts": {
+    "mtime": 1783119987.1141045,
+    "hash": "c53c0c3cfdccf245c2223c8d18cf7e9d"
+  },
+  "/Users/lhak/workspace/github.com/lhak1341/obsidian-calendar-notes/src/types.ts": {
+    "mtime": 1783225486.5978372,
+    "hash": "89f86970dc58f46b232ab267195001a3"
+  },
+  "/Users/lhak/workspace/github.com/lhak1341/obsidian-calendar-notes/src/cache.ts": {
+    "mtime": 1783212210.1478019,
+    "hash": "fcd62027ce1fbf1daf3d560c2516a894"
+  },
+  "/Users/lhak/workspace/github.com/lhak1341/obsidian-calendar-notes/src/constants.ts": {
+    "mtime": 1783212946.3329685,
+    "hash": "f962ddcacee3267d60ea83e10bed3a3d"
+  },
+  "/Users/lhak/workspace/github.com/lhak1341/obsidian-calendar-notes/src/icons.ts": {
+    "mtime": 1783119987.1137512,
+    "hash": "92e8dc07ee725223162a3d7148b47a1b"
+  },
+  "/Users/lhak/workspace/github.com/lhak1341/obsidian-calendar-notes/src/calendarSet.ts": {
+    "mtime": 1783212200.226766,
+    "hash": "2282752fae7965fc360dd4ca724ce462"
+  },
+  "/Users/lhak/workspace/github.com/lhak1341/obsidian-calendar-notes/src/ui/suggest.ts": {
+    "mtime": 1783138131.60665,
+    "hash": "baf302e444e9cef8d4fa2de18e435382"
+  },
+  "/Users/lhak/workspace/github.com/lhak1341/obsidian-calendar-notes/src/ui/file-suggest.ts": {
+    "mtime": 1783119987.117391,
+    "hash": "55b063345cfba7bf1e4d47a921f229a2"
+  },
+  "/Users/lhak/workspace/github.com/lhak1341/obsidian-calendar-notes/src/settings/validation.ts": {
+    "mtime": 1783182530.6426594,
+    "hash": "7f3ad651116b38f0fcac40dbfc78d1f3"
+  },
+  "/Users/lhak/workspace/github.com/lhak1341/obsidian-calendar-notes/src/settings/defaults.ts": {
+    "mtime": 1783225489.6524708,
+    "hash": "ad2662ab587337029dc93d44fc7ad51f"
+  },
+  "/Users/lhak/workspace/github.com/lhak1341/obsidian-calendar-notes/src/settings/utils.ts": {
+    "mtime": 1783185776.1902902,
+    "hash": "c2fdf28a800e51e68c778882d2c1540b"
+  },
+  "/Users/lhak/workspace/github.com/lhak1341/obsidian-calendar-notes/src/settings/localization.ts": {
+    "mtime": 1783138124.2754529,
+    "hash": "8bde4572cdc236c7a984063ece24c178"
+  },
+  "/Users/lhak/workspace/github.com/lhak1341/obsidian-calendar-notes/src/settings/index.ts": {
+    "mtime": 1783447903.0390134,
+    "hash": "5fa846c0b974cfdf3fc780dea56eb19a"
+  },
+  "/Users/lhak/workspace/github.com/lhak1341/obsidian-calendar-notes/src/settings/components/NoteTemplateSetting.svelte": {
+    "mtime": 1783119987.1149902,
+    "hash": "29ab506c2c4b60bafca50d0db593ba7f"
+  },
+  "/Users/lhak/workspace/github.com/lhak1341/obsidian-calendar-notes/src/settings/components/NoteFormatSetting.svelte": {
+    "mtime": 1783119987.1149166,
+    "hash": "523cab59326108c0577ee1e8d669f007"
+  },
+  "/Users/lhak/workspace/github.com/lhak1341/obsidian-calendar-notes/src/settings/components/NoteFolderSetting.svelte": {
+    "mtime": 1783119987.1148436,
+    "hash": "56420b26b4b915293b20f12a068a6135"
+  },
+  "/Users/lhak/workspace/github.com/lhak1341/obsidian-calendar-notes/src/settings/components/OpenAtStartupSetting.svelte": {
+    "mtime": 1783447459.5091307,
+    "hash": "df5bb8049777c0cff001d95dfac1118a"
+  },
+  "/Users/lhak/workspace/github.com/lhak1341/obsidian-calendar-notes/src/settings/pages/GranularitySection.svelte": {
+    "mtime": 1783445301.3714643,
+    "hash": "33b5454655c04231b50c57b7c8e28bf7"
+  },
+  "/Users/lhak/workspace/github.com/lhak1341/obsidian-calendar-notes/src/settings/pages/details/PeriodicGroup.svelte": {
+    "mtime": 1783447455.891212,
+    "hash": "a1ec606d193c74f92984e2287755f189"
+  },
+  "/Users/lhak/workspace/github.com/lhak1341/obsidian-calendar-notes/src/calendar/view.ts": {
+    "mtime": 1783182436.2029512,
+    "hash": "6524340d2fed7324fb429ba69054ae36"
+  },
+  "/Users/lhak/workspace/github.com/lhak1341/obsidian-calendar-notes/src/calendar/constants.ts": {
+    "mtime": 1783181630.510887,
+    "hash": "e71492314d975390e0214943f4fe238b"
+  },
+  "/Users/lhak/workspace/github.com/lhak1341/obsidian-calendar-notes/src/calendar/ui/CalendarPane.svelte": {
+    "mtime": 1783225512.262891,
+    "hash": "732c577f15a191675e8eac3444c6cd5e"
+  },
+  "/Users/lhak/workspace/github.com/lhak1341/obsidian-calendar-notes/src/calendar/ui/types.ts": {
+    "mtime": 1783223788.583948,
+    "hash": "301926f906cdf124afe3f797e2f2d897"
+  },
+  "/Users/lhak/workspace/github.com/lhak1341/obsidian-calendar-notes/src/calendar/ui/Calendar.svelte": {
+    "mtime": 1783225639.5092185,
+    "hash": "9fc8f33281b1fc0b8893da96a9cdfee7"
+  },
+  "/Users/lhak/workspace/github.com/lhak1341/obsidian-calendar-notes/src/calendar/ui/openWithConfirm.ts": {
+    "mtime": 1783213182.258856,
+    "hash": "5b11d3369172dc6279754ecd51cad309"
+  },
+  "/Users/lhak/workspace/github.com/lhak1341/obsidian-calendar-notes/src/calendar/sources/wordCount.ts": {
+    "mtime": 1783183908.2233238,
+    "hash": "eface0f56faaf0159f7b50a31a73e58c"
+  },
+  "/Users/lhak/workspace/github.com/lhak1341/obsidian-calendar-notes/src/switcher/navigator.ts": {
+    "mtime": 1783187794.1599002,
+    "hash": "11135636c3fcc5c2e939e1f0b51022d6"
+  },
+  "/Users/lhak/workspace/github.com/lhak1341/obsidian-calendar-notes/src/timeline/manager.ts": {
+    "mtime": 1783187451.952657,
+    "hash": "943f369ae34606d8824e7f669e63efa9"
+  },
+  "/Users/lhak/workspace/github.com/lhak1341/obsidian-calendar-notes/src/timeline/RelativeIcon.svelte": {
+    "mtime": 1783124383.3317401,
+    "hash": "46f3bd856fe07d11a7abbc32b4f02f6f"
+  },
+  "/Users/lhak/workspace/github.com/lhak1341/obsidian-calendar-notes/src/timeline/Timeline.svelte": {
+    "mtime": 1783187439.0534172,
+    "hash": "37ece3df9c6f6415a5a84e6eea38649a"
+  },
+  "/Users/lhak/workspace/github.com/lhak1341/obsidian-calendar-notes/README.md": {
+    "mtime": 1783119987.112766,
+    "hash": "3a599da6eb0dd54daeb3a736aeb68270"
+  },
+  "/Users/lhak/workspace/github.com/lhak1341/obsidian-calendar-notes/CLAUDE.md": {
+    "mtime": 1783448090.0537403,
+    "hash": "7663470b20bc4caa0627d6249609e0b4"
+  }
+}

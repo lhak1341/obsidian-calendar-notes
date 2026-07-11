@@ -19,3 +19,14 @@
 - Settings cards: `.setting-items` only gets padding/background/radius when inside `.setting-group` — use `containerEl.createDiv("setting-group").createDiv("setting-items")` and pass the inner div to `new Setting(...)` for grouped settings panels
 - SVG fill/stroke: use `currentColor` not CSS vars — Obsidian base CSS can override `fill: var(--x)` on SVG elements; `currentColor` inherits from the parent's `color` which Svelte scoped CSS controls reliably
 - Obsidian overrides bare element selectors (e.g. `th`) — use a parent class selector (`.calendar th`) and `!important` on the overridden properties to win the cascade
+
+## graphify
+
+This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+
+Rules:
+- ALWAYS read graphify-out/GRAPH_REPORT.md before reading any source files, running grep/glob searches, or answering codebase questions. The graph is your primary map of the codebase.
+- IF graphify-out/wiki/index.md EXISTS, navigate it instead of reading raw files
+- For cross-module "how does X relate to Y" questions, prefer `graphify query "<question>"`, `graphify path "<A>" "<B>"`, or `graphify explain "<concept>"` over grep — these traverse the graph's EXTRACTED + INFERRED edges instead of scanning files
+- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+- Architecture review reports (`/improve-codebase-architecture`) → save to `temp/` (project folder), not OS temp.
