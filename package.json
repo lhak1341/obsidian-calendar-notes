@@ -10,7 +10,8 @@
     "lint:fix": "svelte-check && eslint . --fix",
     "dev": "bun esbuild.config.mjs",
     "build": "bun run lint && bun esbuild.config.mjs production",
-    "deploy": "bun run lint && bun esbuild.config.mjs deploy && cp manifest.json \"/Users/lhak/Library/Mobile Documents/iCloud~md~obsidian/Documents/lhakZettel/.obsidian/plugins/obsidian-calendar-notes/\"",
+    "deploy": "bun run lint && bun esbuild.config.mjs production && bun run scripts/deploy.mjs",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "release": "standard-version"
   },

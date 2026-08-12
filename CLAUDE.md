@@ -1,32 +1,23 @@
-## Linting
-- Run `bun run lint:fix` or `./node_modules/.bin/eslint . --fix` — `npx eslint` fails through the rtk hook
-- `eslint-plugin-obsidianmd` is registered manually in `eslint.config.js` (plugin + rules inline); do NOT spread `obsidianmd.configs.recommended` — it bundles conflicting plugins (@microsoft/sdl, no-unsanitized, eslint-comments, etc.)
-- Uses `eslint-plugin-import-x` (ESLint 10-compatible); auto-fix works — run `eslint . --fix` to sort imports
-- `bun run dev` without `TEST_VAULT` env var writes build output to `undefined.obsidian/` in repo root (gitignored); set `TEST_VAULT` to a trailing-slash vault path to use a real test vault
+# obsidian-calendar-notes
 
-## Testing
-- Run `bun run test` (vitest); test files live alongside source as `*.test.ts`
+House conventions for Obsidian plugin repos live in the `obsidian-plugin-dev` skill —
+bun, script contract, ESLint/obsidianmd setup, settings-tab structure, API/CSS gotchas,
+live debugging. Only repo-specific facts are below.
 
-## Code Analysis
-- `bun run build` runs esbuild + eslint; errors appear as `ERROR` lines and `X ERRORS` in the COMPLETED summary
-- Fallow reports ~93% "dead files" as false positives — Obsidian loads plugins dynamically so static analysis can't trace the real entry graph; trust complexity and circular-dep findings, ignore unused-file verdicts
+Has `graphify-out/`.
 
-## Svelte
-- `src/settings/` components use Svelte 4 syntax (`export let`, `$:`); calendar UI uses Svelte 5 runes (`$state`, `$derived`) — don't mix within an area
-- `getSettingDefinitions()` declarative `control: { type, key }` shorthand requires `plugin.settings[key]` to work — incompatible with a Svelte store; use `render` callbacks or override `display()` instead
+## This repo
 
-## Obsidian CSS
-- Settings cards: `.setting-items` only gets padding/background/radius when inside `.setting-group` — use `containerEl.createDiv("setting-group").createDiv("setting-items")` and pass the inner div to `new Setting(...)` for grouped settings panels
-- SVG fill/stroke: use `currentColor` not CSS vars — Obsidian base CSS can override `fill: var(--x)` on SVG elements; `currentColor` inherits from the parent's `color` which Svelte scoped CSS controls reliably
-- Obsidian overrides bare element selectors (e.g. `th`) — use a parent class selector (`.calendar th`) and `!important` on the overridden properties to win the cascade
+- ESLint config is `eslint.config.js` (not `.mjs`) and additionally uses
+  `eslint-plugin-import-x` (ESLint 10-compatible) with auto-fixable import sorting.
+- `bun run build` runs esbuild **and** eslint; errors surface as `ERROR` lines and an
+  `X ERRORS` count in the COMPLETED summary.
+- `bun run dev` without a `TEST_VAULT` env var writes build output to `undefined.obsidian/`
+  in the repo root (gitignored). Set `TEST_VAULT` to a trailing-slash vault path.
+- `standard-version` handles releases (`bun run release`).
+- Test files live alongside source as `*.test.ts`.
 
-## graphify
+## Svelte version split
 
-This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
-
-Rules:
-- ALWAYS read graphify-out/GRAPH_REPORT.md before reading any source files, running grep/glob searches, or answering codebase questions. The graph is your primary map of the codebase.
-- IF graphify-out/wiki/index.md EXISTS, navigate it instead of reading raw files
-- For cross-module "how does X relate to Y" questions, prefer `graphify query "<question>"`, `graphify path "<A>" "<B>"`, or `graphify explain "<concept>"` over grep — these traverse the graph's EXTRACTED + INFERRED edges instead of scanning files
-- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
-- Architecture review reports (`/improve-codebase-architecture`) → save to `temp/` (project folder), not OS temp.
+`src/settings/` uses Svelte 4 (`export let`, `$:`); the calendar UI uses Svelte 5 runes.
+This is deliberate — do not mix within either area.

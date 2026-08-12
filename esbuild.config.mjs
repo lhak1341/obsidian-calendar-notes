@@ -12,17 +12,14 @@ if you want to view the source, please visit the github repository of this plugi
 */
 `;
 
-const VAULT_DIR =
-  "/Users/lhak/Library/Mobile Documents/iCloud~md~obsidian/Documents/lhakZettel/";
-
 const mode = process.argv[2];
 const prod = mode === "production";
-const deploy = mode === "deploy";
 
+// Production builds land in the repo root; scripts/deploy.mjs copies them into the
+// vault (and owns the only vault path in this repo). Watch mode writes straight into
+// the vault named by TEST_VAULT, or REAL_VAULT when REAL=1.
 let outdir = "./";
-if (deploy) {
-  outdir = `${VAULT_DIR}.obsidian/plugins/${manifest.id}`;
-} else if (!prod) {
+if (!prod) {
   const vaultDir =
     process.env.REAL === "1" ? process.env.REAL_VAULT : process.env.TEST_VAULT;
   outdir = `${vaultDir}.obsidian/plugins/${manifest.id}`;
@@ -37,7 +34,7 @@ const sveltePreprocessOptions = {
 
 const buildOptions = {
   banner: { js: banner },
-  minify: prod || deploy,
+  minify: prod,
   entryPoints: ["src/main.ts", "src/styles.css"],
   bundle: true,
   external: [
@@ -79,12 +76,12 @@ const buildOptions = {
   define: { "import.meta.url": '"file:///plugin"' },
   logLevel: "info",
   logOverride: { "empty-import-meta": "silent" },
-  sourcemap: prod || deploy ? false : "inline",
+  sourcemap: prod ? false : "inline",
   treeShaking: true,
   outdir,
 };
 
-if (!prod && !deploy) {
+if (!prod) {
   const ctx = await esbuild.context(buildOptions);
   await ctx.watch();
 } else {

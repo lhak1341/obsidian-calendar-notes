@@ -128,7 +128,9 @@ export default class PeriodicNotesPlugin extends Plugin implements IPeriodicNote
           return false;
         }
         if (checking) {
-          return !!this.app.workspace.activeLeaf;
+          // Any open leaf is enough — NLDNavigator opens the target note itself and
+          // treats the active file as optional, so it needs no editor or markdown view.
+          return !!this.app.workspace.getMostRecentLeaf();
         }
         new NLDNavigator(this.app, this).open();
       },
