@@ -53,6 +53,13 @@ export class NLDNavigator extends SuggestModal<DateNavigationItem> {
     });
   }
 
+  // Obsidian's SuggestModal has no public API to set a query and recompute
+  // suggestions other than firing a real "input" event on inputEl.
+  presetQuery(query: string): void {
+    this.inputEl.value = query;
+    this.inputEl.dispatchEvent(new Event("input"));
+  }
+
   private getSelectedItem(): DateNavigationItem {
     /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
     return (this as any).chooser.values[(this as any).chooser.selectedItem];
@@ -268,9 +275,7 @@ export class RelatedFilesSwitcher extends SuggestModal<DateNavigationItem> {
       this.close();
       const nav = new NLDNavigator(this.app, this.plugin);
       nav.open();
-
-      nav.inputEl.value = oldQuery;
-      nav.inputEl.dispatchEvent(new Event("input"));
+      nav.presetQuery(oldQuery);
     });
 
     this.scope.register(["Shift"], "8", (evt: KeyboardEvent) => {

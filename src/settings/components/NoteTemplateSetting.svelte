@@ -8,25 +8,21 @@
   import { FileSuggest } from "src/ui/file-suggest";
 
   import { validateTemplate } from "../validation";
+  import { useFieldValidation } from "./useFieldValidation";
   import { displayConfigs } from "src/commands";
 
   export let app: App;
   export let granularity: Granularity;
   export let config: Readable<PeriodicConfig>;
 
-  let error: string;
   let inputEl: HTMLInputElement;
 
-  function validateOnBlur() {
-    error = validateTemplate(app, inputEl.value);
-  }
-
-  function clearError() {
-    error = "";
-  }
+  const { error, onChange, onInput } = useFieldValidation(
+    () => inputEl.value,
+    (value) => validateTemplate(app, value)
+  );
 
   onMount(() => {
-    error = validateTemplate(app, inputEl.value);
     new FileSuggest(app, inputEl);
   });
 </script>
@@ -39,20 +35,20 @@
     <div class="setting-item-description">
       Choose the file to use as a template
     </div>
-    {#if error}
-      <div class="has-error">{error}</div>
+    {#if $error}
+      <div class="has-error">{$error}</div>
     {/if}
   </div>
   <div class="setting-item-control">
     <input
-      class:has-error={!!error}
+      class:has-error={!!$error}
       type="text"
       spellcheck={false}
       placeholder="e.g. templates/template-file"
       bind:value={$config.templatePath}
       bind:this={inputEl}
-      on:change={validateOnBlur}
-      on:input={clearError}
+      on:change={onChange}
+      on:input={onInput}
     />
   </div>
 </div>

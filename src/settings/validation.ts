@@ -8,14 +8,37 @@ export function removeEscapedCharacters(format: string): string {
   return withoutBrackets.replace(/\\./g, "");
 }
 
-function pathWithoutExtension(file: TFile): string {
+type FileLike = Pick<TFile, "path" | "basename" | "extension">;
+
+function pathWithoutExtension(file: FileLike): string {
   const extLen = file.extension.length + 1;
   return file.path.slice(0, -extLen);
 }
 
+// Splits a moment format string on "/", ignoring slashes escaped inside
+// bracket literals (e.g. "YYYY[/]MM" is one segment, not two) — this is the
+// single source of truth for how many folder levels a nested format has.
+export function splitFormatSegments(format: string): string[] {
+  const segments: string[] = [];
+  let current = "";
+  let bracketDepth = 0;
+  for (const char of format) {
+    if (char === "[") bracketDepth++;
+    if (char === "]") bracketDepth = Math.max(0, bracketDepth - 1);
+
+    if (char === "/" && bracketDepth === 0) {
+      segments.push(current);
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+  segments.push(current);
+  return segments;
+}
+
 export function getBasename(format: string): string {
-  const isTemplateNested = format.indexOf("/") !== -1;
-  return isTemplateNested ? format.split("/").pop() ?? "" : format;
+  return splitFormatSegments(format).pop() ?? "";
 }
 
 function isValidFilename(filename: string): boolean {
@@ -63,8 +86,8 @@ export function validateFormatComplexity(
     return "loose-parsing";
   }
 
-  const strippedFormat = removeEscapedCharacters(format);
-  if (strippedFormat.includes("/")) {
+  const segments = splitFormatSegments(format);
+  if (segments.length > 1) {
     if (
       granularity === "day" &&
       !["m", "d", "y"].every(
@@ -83,15 +106,14 @@ export function validateFormatComplexity(
 }
 
 export function getDateInput(
-  file: TFile,
+  file: FileLike,
   format: string,
   granularity: Granularity
 ): string {
   // pseudo-intelligently find files when the format is YYYY/MM/DD for example
   if (validateFormatComplexity(format, granularity) === "fragile-basename") {
     const fileName = pathWithoutExtension(file);
-    const strippedFormat = removeEscapedCharacters(format);
-    const nestingLvl = (strippedFormat.match(/\//g)?.length ?? 0) + 1;
+    const nestingLvl = splitFormatSegments(format).length;
     const pathParts = fileName.split("/");
     return pathParts.slice(-nestingLvl).join("/");
   }

@@ -5,9 +5,7 @@ export interface CalendarDot {
   isFilled: boolean;
 }
 
-export interface DotSource {
-  getDots(date: Moment, note: TFile | null): Promise<CalendarDot[]>;
-}
+export type GetDots = (date: Moment, note: TFile | null) => Promise<CalendarDot[]>;
 
 export function dayUID(date: Moment): string {
   return date.format("YYYY-MM-DD");

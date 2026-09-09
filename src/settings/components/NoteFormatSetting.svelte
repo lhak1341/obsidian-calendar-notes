@@ -1,9 +1,8 @@
 <script lang="ts">
-  import { onMount } from "svelte";
-
   import { DEFAULT_FORMAT } from "src/constants";
   import type { Granularity, PeriodicConfig } from "src/types";
   import { validateFormat, validateFormatComplexity } from "../validation";
+  import { useFieldValidation } from "./useFieldValidation";
   import type { Readable } from "svelte/store";
   import { displayConfigs } from "src/commands";
 
@@ -14,25 +13,23 @@
 
   let inputEl: HTMLInputElement;
   let value: string = "";
-  let error: string;
-  let warning: string;
 
   $: {
     value = $config.format || "";
   }
 
-  onMount(() => {
-    error = validateFormat(inputEl.value, granularity);
-    warning = validateFormatComplexity(inputEl.value, granularity);
-  });
-
-  function clearError() {
-    error = "";
-  }
+  const { error, onChange: onFormatChange, onInput: clearError } = useFieldValidation(
+    () => inputEl.value,
+    (value) => validateFormat(value, granularity)
+  );
+  const { error: warning, onChange: onComplexityChange } = useFieldValidation(
+    () => inputEl.value,
+    (value) => validateFormatComplexity(value, granularity)
+  );
 
   function onChange() {
-    error = validateFormat(inputEl.value, granularity);
-    warning = validateFormatComplexity(inputEl.value, granularity);
+    onFormatChange();
+    onComplexityChange();
   }
 </script>
 
@@ -49,17 +46,17 @@
         </b>
       </div>
     </div>
-    {#if error}
-      <div class="has-error">{error}</div>
-    {:else if warning !== "valid"}
+    {#if $error}
+      <div class="has-error">{$error}</div>
+    {:else if $warning !== "valid"}
       <div class="alert-warning">
-        {#if warning === "loose-parsing"}
+        {#if $warning === "loose-parsing"}
           Your filename format cannot be parsed. If you would still like to use
           this format for your {displayConfigs[granularity].periodicity} notes, you
           will need to include the following in the frontmatter of your template
           file:
           <pre><code>{granularity}: {DEFAULT_FORMAT[granularity]}</code></pre>
-        {:else if warning === "fragile-basename"}
+        {:else if $warning === "fragile-basename"}
           Your base filename is not uniquely identifiable. If you would still
           like to use this format, it is recommended that you include the
           following in the frontmatter of your daily note template:
@@ -72,7 +69,7 @@
     <input
       bind:value={$config.format}
       bind:this={inputEl}
-      class:has-error={!!error}
+      class:has-error={!!$error}
       type="text"
       spellcheck={false}
       placeholder={defaultFormat}

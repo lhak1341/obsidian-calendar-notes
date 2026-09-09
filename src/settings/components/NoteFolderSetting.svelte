@@ -6,6 +6,7 @@
   import type { Granularity, PeriodicConfig } from "src/types";
 
   import { validateFolder } from "../validation";
+  import { useFieldValidation } from "./useFieldValidation";
   import type { Readable } from "svelte/store";
   import { displayConfigs } from "src/commands";
 
@@ -14,18 +15,13 @@
   export let granularity: Granularity;
 
   let inputEl: HTMLInputElement;
-  let error: string;
 
-  function onChange() {
-    error = validateFolder(app, inputEl.value);
-  }
-
-  function clearError() {
-    error = "";
-  }
+  const { error, onChange, onInput } = useFieldValidation(
+    () => inputEl.value,
+    (value) => validateFolder(app, value)
+  );
 
   onMount(() => {
-    error = validateFolder(app, inputEl.value);
     new FolderSuggest(app, inputEl);
   });
 </script>
@@ -36,20 +32,20 @@
     <div class="setting-item-description">
       New {displayConfigs[granularity].periodicity} notes will be placed here
     </div>
-    {#if error}
-      <div class="has-error">{error}</div>
+    {#if $error}
+      <div class="has-error">{$error}</div>
     {/if}
   </div>
   <div class="setting-item-control">
     <input
       bind:value={$config.folder}
       bind:this={inputEl}
-      class:has-error={!!error}
+      class:has-error={!!$error}
       type="text"
       spellcheck={false}
       placeholder="e.g. folder 1/folder 2"
       on:change={onChange}
-      on:input={clearError}
+      on:input={onInput}
     />
   </div>
 </div>

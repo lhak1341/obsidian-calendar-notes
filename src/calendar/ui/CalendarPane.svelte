@@ -30,8 +30,8 @@
     shouldConfirmBeforeCreate = s.shouldConfirmBeforeCreate ?? true;
   });
 
-  // ── Dot sources ────────────────────────────────────────────────────────────
-  const sources = $derived([createWordCountSource(p.app.vault, () => wordsPerDot)]);
+  // ── Dot source ─────────────────────────────────────────────────────────────
+  const getDots = $derived(createWordCountSource(p.app.vault, () => wordsPerDot));
 
   // ── Selected day tracking ──────────────────────────────────────────────────
   let selectedId = $state("");
@@ -136,7 +136,7 @@
   {selectedId}
   {showWeekNums}
   {useJapaneseWeekdays}
-  {sources}
+  {getDots}
   {getNoteForDate}
   {getNoteForWeek}
   onClickDay={handleClickDay}

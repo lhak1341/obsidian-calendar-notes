@@ -3,7 +3,8 @@
   import type { TFile } from "obsidian";
   import { onDestroy } from "svelte";
 
-  import type { CalendarDot, DotSource } from "./types";
+  import { createDotScheduler, type DotCell } from "./dotScheduler";
+  import type { CalendarDot, GetDots } from "./types";
   import { dayUID, weekUID } from "./types";
 
   // ── Props ──────────────────────────────────────────────────────────────────
@@ -13,7 +14,7 @@
     selectedId = "",
     showWeekNums = false,
     useJapaneseWeekdays = false,
-    sources = [],
+    getDots = async () => [],
     getNoteForDate = (_date: Moment): TFile | null => null,
     getNoteForWeek = (_date: Moment): TFile | null => null,
     onClickDay,
@@ -28,7 +29,7 @@
     selectedId?: string;
     showWeekNums?: boolean;
     useJapaneseWeekdays?: boolean;
-    sources?: DotSource[];
+    getDots?: GetDots;
     getNoteForDate?: (date: Moment) => TFile | null;
     getNoteForWeek?: (date: Moment) => TFile | null;
     onClickDay?: (date: Moment, isMetaPressed: boolean) => void;
@@ -77,29 +78,22 @@
   });
 
   // ── Dot computation ────────────────────────────────────────────────────────
+  const computeDots = createDotScheduler();
+
   $effect(() => {
     void refreshTick;
-    if (sources.length === 0) return;
 
-    const newDots: Record<string, CalendarDot[]> = {};
-
-    const dayPromises = weeks
+    const dayCells: DotCell[] = weeks
       .flatMap((w: { weekNum: number; days: Moment[] }) => w.days)
-      .map(async (date: Moment) => {
-        const note = getNoteForDate(date);
-        const results = await Promise.all(sources.map((s) => s.getDots(date, note)));
-        newDots[dayUID(date)] = (results as CalendarDot[][]).flat();
-      });
+      .map((date: Moment) => ({ uid: dayUID(date), date, note: getNoteForDate(date) }));
 
-    const weekPromises = weeks.map(async (w: { weekNum: number; days: Moment[] }) => {
+    const weekCells: DotCell[] = weeks.map((w: { weekNum: number; days: Moment[] }) => {
       const weekDate = w.days[0];
-      const note = getNoteForWeek(weekDate);
-      const results = await Promise.all(sources.map((s) => s.getDots(weekDate, note)));
-      newDots[weekUID(weekDate)] = (results as CalendarDot[][]).flat();
+      return { uid: weekUID(weekDate), date: weekDate, note: getNoteForWeek(weekDate) };
     });
 
-    Promise.all([...dayPromises, ...weekPromises]).then(() => {
-      dotsByDate = newDots;
+    computeDots([...dayCells, ...weekCells], getDots).then((result) => {
+      if (result) dotsByDate = result;
     });
   });
 

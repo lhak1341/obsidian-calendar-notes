@@ -27,6 +27,12 @@ export interface PeriodicConfig {
   templatePath?: string;
 }
 
+// PeriodicConfig plus derived fields, resolved for a specific granularity.
+export interface ResolvedPeriodicConfig extends PeriodicConfig {
+  possibleFormats: string[];
+  isIso: boolean;
+}
+
 // --- Settings shape ---
 
 export interface ISettings {

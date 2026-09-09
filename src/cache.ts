@@ -11,11 +11,9 @@ import {
 } from "obsidian";
 import { get, type Readable } from "svelte/store";
 
-import { configFor } from "./calendarSet";
+import { decide, getCanonicalDateString } from "./cacheDecision";
 import { DEFAULT_CALENDARSET_ID } from "./constants";
 import { DEFAULT_FORMAT } from "./constants";
-import { getLooselyMatchedDate } from "./parser";
-import { getDateInput } from "./settings/validation";
 import {
   granularities,
   type Granularity,
@@ -31,10 +29,6 @@ function compareGranularity(a: Granularity, b: Granularity) {
   if (idxA === idxB) return 0;
   if (idxA < idxB) return -1;
   return 1;
-}
-
-function getCanonicalDateString(_granularity: Granularity, date: Moment): string {
-  return date.toISOString();
 }
 
 export class PeriodicNotesCache extends Component {
@@ -117,7 +111,7 @@ export class PeriodicNotesCache extends Component {
             filePath: file.path,
             date,
             granularity,
-            canonicalDateStr: getCanonicalDateString(granularity, date),
+            canonicalDateStr: getCanonicalDateString(date),
             matchData: { exact: true, matchType: "frontmatter" },
           });
         }
@@ -133,59 +127,6 @@ export class PeriodicNotesCache extends Component {
     }
   }
 
-  private resolveByFilename(
-    file: TFile,
-    settings: ISettings,
-    granularity: Granularity,
-    reason: "create" | "rename" | "initialize"
-  ): boolean {
-    const cfg = configFor(settings, granularity);
-    if (!file.path.startsWith(cfg.folder)) return false;
-
-    const dateInputStr = getDateInput(file, cfg.possibleFormats[0], granularity);
-    const date = window.moment(dateInputStr, cfg.possibleFormats, true);
-    if (!date.isValid()) return false;
-
-    const metadata: PeriodicNoteCachedMetadata = {
-      filePath: file.path,
-      date,
-      granularity,
-      canonicalDateStr: getCanonicalDateString(granularity, date),
-      matchData: { exact: true, matchType: "filename" },
-    };
-    this.cachedFiles.set(file.path, metadata);
-
-    if (reason === "create" && file.stat.size === 0) {
-      applyPeriodicTemplateToFile(this.app, file, settings, metadata);
-    }
-
-    this.app.workspace.trigger("periodic-notes:resolve", granularity, file);
-    return true;
-  }
-
-  private resolveByLooseMatch(file: TFile): boolean {
-    const nonStrictDate = getLooselyMatchedDate(file.basename);
-    if (!nonStrictDate) return false;
-
-    this.cachedFiles.set(file.path, {
-      filePath: file.path,
-      date: nonStrictDate.date,
-      granularity: nonStrictDate.granularity,
-      canonicalDateStr: getCanonicalDateString(
-        nonStrictDate.granularity,
-        nonStrictDate.date
-      ),
-      matchData: { exact: false, matchType: "filename" },
-    });
-
-    this.app.workspace.trigger(
-      "periodic-notes:resolve",
-      nonStrictDate.granularity,
-      file
-    );
-    return true;
-  }
-
   private resolve(
     file: TFile,
     reason: "create" | "rename" | "initialize" = "create"
@@ -194,15 +135,28 @@ export class PeriodicNotesCache extends Component {
     const activeGranularities = granularities.filter((g) => settings[g]?.enabled);
     if (activeGranularities.length === 0) return;
 
-    // frontmatter entries supercede filename matches
     const existingEntry = this.cachedFiles.get(file.path);
-    if (existingEntry?.matchData.matchType === "frontmatter") return;
+    const match = decide(
+      {
+        path: file.path,
+        basename: file.basename,
+        extension: file.extension,
+        size: file.stat.size,
+      },
+      settings,
+      activeGranularities,
+      existingEntry
+    );
+    if (!match) return;
 
-    for (const granularity of activeGranularities) {
-      if (this.resolveByFilename(file, settings, granularity, reason)) return;
+    this.cachedFiles.set(file.path, match);
+    this.app.workspace.trigger("periodic-notes:resolve", match.granularity, file);
+
+    const isStrictFilenameMatch =
+      match.matchData.matchType === "filename" && match.matchData.exact;
+    if (reason === "create" && file.stat.size === 0 && isStrictFilenameMatch) {
+      applyPeriodicTemplateToFile(this.app, file, settings, match);
     }
-
-    this.resolveByLooseMatch(file);
   }
 
   public getPeriodicNote(

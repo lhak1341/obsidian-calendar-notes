@@ -132,7 +132,7 @@ export async function applyPeriodicTemplateToFile(
   metadata: PeriodicNoteCachedMetadata
 ) {
   const cfg = configFor(settings, metadata.granularity);
-  const templateContents = await getTemplateContents(app, cfg.config.templatePath);
+  const templateContents = await getTemplateContents(app, cfg.templatePath);
   const renderedContents = applyTemplateTransformations(
     file.basename,
     metadata.granularity,

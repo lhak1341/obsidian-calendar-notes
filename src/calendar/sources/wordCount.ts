@@ -2,7 +2,7 @@ import type { Moment } from "moment";
 import type { TFile, Vault } from "obsidian";
 
 import { NUM_MAX_DOTS } from "../constants";
-import type { CalendarDot, DotSource } from "../ui/types";
+import type { CalendarDot, GetDots } from "../ui/types";
 
 function clamp(num: number, lo: number, hi: number): number {
   return Math.min(Math.max(lo, num), hi);
@@ -16,18 +16,13 @@ function getWordCount(text: string): number {
   return words.length;
 }
 
-export function createWordCountSource(
-  vault: Vault,
-  getWordsPerDot: () => number
-): DotSource {
-  return {
-    async getDots(_date: Moment, note: TFile | null): Promise<CalendarDot[]> {
-      const wordsPerDot = getWordsPerDot();
-      if (!note || wordsPerDot <= 0) return [];
-      const text = await vault.cachedRead(note);
-      const count = getWordCount(text);
-      const numDots = clamp(Math.floor(count / wordsPerDot), 1, NUM_MAX_DOTS);
-      return Array.from({ length: numDots }, () => ({ isFilled: true }));
-    },
+export function createWordCountSource(vault: Vault, getWordsPerDot: () => number): GetDots {
+  return async (_date: Moment, note: TFile | null): Promise<CalendarDot[]> => {
+    const wordsPerDot = getWordsPerDot();
+    if (!note || wordsPerDot <= 0) return [];
+    const text = await vault.cachedRead(note);
+    const count = getWordCount(text);
+    const numDots = clamp(Math.floor(count / wordsPerDot), 1, NUM_MAX_DOTS);
+    return Array.from({ length: numDots }, () => ({ isFilled: true }));
   };
 }

@@ -1,6 +1,6 @@
 import type { Moment } from "moment";
 import { addIcon, Plugin, TFile } from "obsidian";
-import { get, writable, type Writable } from "svelte/store";
+import { get, writable } from "svelte/store";
 
 import { PeriodicNotesCache } from "./cache";
 import { VIEW_TYPE_CALENDAR } from "./calendar/constants";
@@ -14,6 +14,7 @@ import {
   calendarQuarterIcon,
   calendarYearIcon,
 } from "./icons";
+import { addLegacySettingsCompat, type SettingsStore } from "./legacySettingsCompat";
 import { showFileMenu } from "./modal";
 import {
   type ISettings,
@@ -42,16 +43,6 @@ import {
   getTemplateContents,
   isMetaPressed,
 } from "./utils";
-
-// obsidian-daily-notes-interface reads plugin.settings.daily/weekly/etc. as plain objects.
-type LegacyConfig = PeriodicConfig & { template?: string };
-type SettingsStore = Writable<ISettings> & {
-  daily?: LegacyConfig;
-  weekly?: LegacyConfig;
-  monthly?: LegacyConfig;
-  quarterly?: LegacyConfig;
-  yearly?: LegacyConfig;
-};
 
 // Shape of the old calendarSets-based data.json (for migration)
 interface LegacyCalendarSetData {
@@ -102,8 +93,7 @@ export default class PeriodicNotesPlugin extends Plugin implements IPeriodicNote
 
     this.registerView(VIEW_TYPE_CALENDAR, (leaf) => new CalendarView(leaf, this));
 
-    this.settings = writable<ISettings>() as SettingsStore;
-    this.addLegacySettingsCompat();
+    this.settings = addLegacySettingsCompat(writable<ISettings>());
     await this.loadSettings();
     this.register(this.settings.subscribe(this.onUpdateSettings.bind(this)));
 
@@ -148,28 +138,6 @@ export default class PeriodicNotesPlugin extends Plugin implements IPeriodicNote
         this.openPeriodicNote(startupNoteConfig.granularity, window.moment());
       }
     });
-  }
-
-  private addLegacySettingsCompat(): void {
-    // obsidian-daily-notes-interface reads plugin.settings.daily/weekly/monthly/quarterly/yearly
-    const keyMap: Array<[string, Granularity]> = [
-      ["daily", "day"],
-      ["weekly", "week"],
-      ["monthly", "month"],
-      ["quarterly", "quarter"],
-      ["yearly", "year"],
-    ];
-    for (const [legacyKey, granularity] of keyMap) {
-      Object.defineProperty(this.settings, legacyKey, {
-        get: (): LegacyConfig | undefined => {
-          const s = get(this.settings);
-          const config = s?.[granularity];
-          return config ? { ...config, template: config.templatePath } : undefined;
-        },
-        enumerable: false,
-        configurable: true,
-      });
-    }
   }
 
   private configureRibbonIcons() {
@@ -294,7 +262,7 @@ export default class PeriodicNotesPlugin extends Plugin implements IPeriodicNote
     const s = get(this.settings);
     const cfg = configFor(s, granularity);
     const filename = date.format(cfg.format);
-    const templateContents = await getTemplateContents(this.app, cfg.config.templatePath);
+    const templateContents = await getTemplateContents(this.app, cfg.templatePath);
     const renderedContents = applyTemplateTransformations(
       filename,
       granularity,
@@ -302,7 +270,7 @@ export default class PeriodicNotesPlugin extends Plugin implements IPeriodicNote
       cfg.format,
       templateContents
     );
-    const destPath = await getNoteCreationPath(this.app, filename, cfg.config);
+    const destPath = await getNoteCreationPath(this.app, filename, cfg);
     return this.app.vault.create(destPath, renderedContents);
   }
 
@@ -355,7 +323,7 @@ export default class PeriodicNotesPlugin extends Plugin implements IPeriodicNote
   }
 
   public getActiveConfig(granularity: Granularity): PeriodicConfig {
-    return configFor(get(this.settings), granularity).config;
+    return configFor(get(this.settings), granularity);
   }
 
   public getFormat(granularity: Granularity): string {
