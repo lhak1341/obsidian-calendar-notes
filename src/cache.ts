@@ -223,6 +223,19 @@ export class PeriodicNotesCache extends Component {
     const offset = direction === "forwards" ? 1 : -1;
     return sortedCache[activeNoteIndex + offset];
   }
+
+  // Nearest existing note strictly before `targetDate`, regardless of gaps.
+  public findNearestBefore(
+    granularity: Granularity,
+    targetDate: Moment
+  ): PeriodicNoteCachedMetadata | null {
+    const candidates = Array.from(this.cachedFiles.values()).filter(
+      (m) => m.granularity === granularity && m.date.isBefore(targetDate, granularity)
+    );
+    if (!candidates.length) return null;
+
+    return sortBy(candidates, ["canonicalDateStr"]).pop() ?? null;
+  }
 }
 
 // Kept for backward-compat with any code still referencing it

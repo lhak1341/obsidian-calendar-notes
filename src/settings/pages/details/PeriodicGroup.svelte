@@ -11,6 +11,7 @@
   import { DEFAULT_PERIODIC_CONFIG } from "src/settings/defaults";
   import type { ISettings } from "src/types";
   import OpenAtStartupSetting from "src/settings/components/OpenAtStartupSetting.svelte";
+  import RolloverSetting from "src/settings/components/RolloverSetting.svelte";
 
   export let app: App;
   export let granularity: Granularity;
@@ -49,5 +50,8 @@
     <NoteFolderSetting {app} {config} {granularity} />
     <NoteTemplateSetting {app} {config} {granularity} />
     <OpenAtStartupSetting {config} {settings} {granularity} />
+    {#if granularity === "day"}
+      <RolloverSetting {settings} />
+    {/if}
   </div>
 </div>

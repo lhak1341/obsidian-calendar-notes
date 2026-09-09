@@ -55,6 +55,10 @@ export interface ISettings {
   useJapaneseWeekdays: boolean;
   wordsPerDot: number;
   shouldConfirmBeforeCreate: boolean;
+
+  // Rollover unfinished tasks (daily notes only)
+  rolloverUnfinishedTasks: boolean;
+  rolloverHeading: string;
 }
 
 // --- Cache data types ---

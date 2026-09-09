@@ -13,3 +13,6 @@ Repo-specific gotchas below.
   `src/__mocks__/obsidian.ts` — Obsidian-runtime globals like `window.moment` are NOT
   polyfilled. Any test touching code that calls `window.moment(...)` needs
   `window.moment = moment` set explicitly (e.g. in `beforeAll`).
+- Every note-creation trigger (command, ribbon icon, calendar click, next/prev nav,
+  startup auto-open) funnels through `createPeriodicNote` in `src/main.ts` — hook
+  creation-time behavior there, not at individual call sites.

@@ -25,8 +25,8 @@
     "semantic_hash": ""
   },
   "src/main.ts": {
-    "mtime": 1788969201.114907,
-    "ast_hash": "043674926e26fdcd72e9dd3af908e16a",
+    "mtime": 1788972870.0585492,
+    "ast_hash": "823d495483eca9aa358df01e829628c5",
     "semantic_hash": ""
   },
   "src/modal.ts": {
@@ -50,13 +50,13 @@
     "semantic_hash": ""
   },
   "src/types.ts": {
-    "mtime": 1788966796.16013,
-    "ast_hash": "14286193d4ff9d3016a6813f6b8fa145",
+    "mtime": 1788972771.2563705,
+    "ast_hash": "0ad896bca4d08a849888ee8998dc019d",
     "semantic_hash": ""
   },
   "src/cache.ts": {
-    "mtime": 1788965666.5828016,
-    "ast_hash": "d130f71046a19428aef3368d4a01819c",
+    "mtime": 1788972813.911469,
+    "ast_hash": "59c0b96a194ee499abb32ad11a3ed4c4",
     "semantic_hash": ""
   },
   "src/constants.ts": {
@@ -90,8 +90,8 @@
     "semantic_hash": ""
   },
   "src/settings/defaults.ts": {
-    "mtime": 1783225489.6524708,
-    "ast_hash": "ad2662ab587337029dc93d44fc7ad51f",
+    "mtime": 1788972775.3043315,
+    "ast_hash": "49f8f1c822553e32f0ab6309a434afdb",
     "semantic_hash": ""
   },
   "src/settings/utils.ts": {
@@ -135,8 +135,8 @@
     "semantic_hash": ""
   },
   "src/settings/pages/details/PeriodicGroup.svelte": {
-    "mtime": 1783447455.891212,
-    "ast_hash": "a1ec606d193c74f92984e2287755f189",
+    "mtime": 1788972847.054855,
+    "ast_hash": "d403fc83ac0af548183295e992a3238d",
     "semantic_hash": ""
   },
   "src/calendar/view.ts": {
@@ -200,8 +200,8 @@
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1788971423.2675333,
-    "ast_hash": "64dcae5f4766ca9c5f3aed9ff3cdac3a",
+    "mtime": 1788973512.3481846,
+    "ast_hash": "ccd902593951233337d3c4b1ead923af",
     "semantic_hash": ""
   },
   "manifest-beta.json": {
@@ -262,6 +262,16 @@
   ".github/workflows/publish.yml": {
     "mtime": 1783119986.8964877,
     "ast_hash": "1f201682f08d3aa4625e1212db612623",
+    "semantic_hash": ""
+  },
+  "src/rollover.ts": {
+    "mtime": 1788972907.4965966,
+    "ast_hash": "dbd42a89c98f9bb7c90dbbb82400b18b",
+    "semantic_hash": ""
+  },
+  "src/settings/components/RolloverSetting.svelte": {
+    "mtime": 1788972838.9196887,
+    "ast_hash": "f6ba3fd0b7e2f1026564446946c89a84",
     "semantic_hash": ""
   }
 }

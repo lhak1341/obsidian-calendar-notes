@@ -73,5 +73,10 @@
   "71": "constructor",
   "72": "onChooseSuggestion",
   "73": "utils.ts",
-  "74": "vitest.config.ts"
+  "74": "vitest.config.ts",
+  "75": "rollover.ts",
+  "76": "moment",
+  "77": "obsidian",
+  "78": "svelte",
+  "79": "svelte-writable-derived"
 }

@@ -16,6 +16,7 @@ import {
 } from "./icons";
 import { addLegacySettingsCompat, type SettingsStore } from "./legacySettingsCompat";
 import { showFileMenu } from "./modal";
+import { extractUnfinishedSection, insertRolledOverItems } from "./rollover";
 import {
   type ISettings,
   PeriodicNotesSettingsTab,
@@ -263,15 +264,43 @@ export default class PeriodicNotesPlugin extends Plugin implements IPeriodicNote
     const cfg = configFor(s, granularity);
     const filename = date.format(cfg.format);
     const templateContents = await getTemplateContents(this.app, cfg.templatePath);
-    const renderedContents = applyTemplateTransformations(
+    let renderedContents = applyTemplateTransformations(
       filename,
       granularity,
       date,
       cfg.format,
       templateContents
     );
+
+    let rolloverSource: { file: TFile; remainingContent: string } | null = null;
+    if (granularity === "day" && s.rolloverUnfinishedTasks && s.rolloverHeading) {
+      const nearest = this.cache.findNearestBefore("day", date);
+      const sourceFile = nearest
+        ? this.app.vault.getAbstractFileByPath(nearest.filePath)
+        : null;
+      if (sourceFile instanceof TFile) {
+        const sourceContent = await this.app.vault.cachedRead(sourceFile);
+        const { remainingContent, itemsText } = extractUnfinishedSection(
+          sourceContent,
+          s.rolloverHeading
+        );
+        if (itemsText) {
+          renderedContents = insertRolledOverItems(renderedContents, s.rolloverHeading, itemsText);
+          rolloverSource = { file: sourceFile, remainingContent };
+        }
+      }
+    }
+
     const destPath = await getNoteCreationPath(this.app, filename, cfg);
-    return this.app.vault.create(destPath, renderedContents);
+    const file = await this.app.vault.create(destPath, renderedContents);
+
+    // Only strip the source note after the new note is safely created, so a
+    // failure here duplicates a task instead of losing it.
+    if (rolloverSource) {
+      await this.app.vault.modify(rolloverSource.file, rolloverSource.remainingContent);
+    }
+
+    return file;
   }
 
   public getPeriodicNote(granularity: Granularity, date: Moment): TFile | null {

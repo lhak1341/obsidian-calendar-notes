@@ -30,4 +30,7 @@ export const DEFAULT_SETTINGS: ISettings = {
   useJapaneseWeekdays: false,
   wordsPerDot: 250,
   shouldConfirmBeforeCreate: true,
+
+  rolloverUnfinishedTasks: false,
+  rolloverHeading: "# Plan",
 };
