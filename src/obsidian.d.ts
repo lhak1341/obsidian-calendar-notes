@@ -1,5 +1,6 @@
 import "obsidian";
 import type { ILocaleOverride, IWeekStartOption } from "./settings/localization";
+import type { Granularity, PeriodicNoteCachedMetadata } from "./types";
 
 declare module "obsidian" {
   interface IWeeklyNoteOptions {
@@ -21,7 +22,13 @@ declare module "obsidian" {
     ): EventRef;
     on(
       name: "periodic-notes:resolve",
-      callback: () => void,
+      callback: (granularity: Granularity, file: TFile) => void,
+      /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+      ctx?: any
+    ): EventRef;
+    on(
+      name: "periodic-notes:empty-note-created",
+      callback: (file: TFile, match: PeriodicNoteCachedMetadata) => void,
       /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
       ctx?: any
     ): EventRef;

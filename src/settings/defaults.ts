@@ -10,11 +10,7 @@ export const DEFAULT_PERIODIC_CONFIG: PeriodicConfig = Object.freeze({
 });
 
 export const DEFAULT_SETTINGS: ISettings = {
-  // Onboarding
   installedVersion: "1.0.0-beta3",
-  showGettingStartedBanner: false,
-  hasMigratedDailyNoteSettings: false,
-  hasMigratedWeeklyNoteSettings: false,
 
   enableTimelineComplication: true,
 

@@ -11,7 +11,12 @@ import {
 } from "obsidian";
 import { get, type Readable } from "svelte/store";
 
-import { decide, getCanonicalDateString } from "./cacheDecision";
+import {
+  decide,
+  getCanonicalDateString,
+  shouldSeedEmptyNote,
+  type ResolveReason,
+} from "./cacheDecision";
 import { DEFAULT_CALENDARSET_ID } from "./constants";
 import { DEFAULT_FORMAT } from "./constants";
 import {
@@ -21,7 +26,6 @@ import {
   type PeriodicConfig,
   type PeriodicNoteCachedMetadata,
 } from "./types";
-import { applyPeriodicTemplateToFile } from "./utils";
 
 function compareGranularity(a: Granularity, b: Granularity) {
   const idxA = granularities.indexOf(a);
@@ -127,10 +131,7 @@ export class PeriodicNotesCache extends Component {
     }
   }
 
-  private resolve(
-    file: TFile,
-    reason: "create" | "rename" | "initialize" = "create"
-  ): void {
+  private resolve(file: TFile, reason: ResolveReason = "create"): void {
     const settings = get(this.settingsStore);
     const activeGranularities = granularities.filter((g) => settings[g]?.enabled);
     if (activeGranularities.length === 0) return;
@@ -152,10 +153,8 @@ export class PeriodicNotesCache extends Component {
     this.cachedFiles.set(file.path, match);
     this.app.workspace.trigger("periodic-notes:resolve", match.granularity, file);
 
-    const isStrictFilenameMatch =
-      match.matchData.matchType === "filename" && match.matchData.exact;
-    if (reason === "create" && file.stat.size === 0 && isStrictFilenameMatch) {
-      applyPeriodicTemplateToFile(this.app, file, settings, match);
+    if (shouldSeedEmptyNote(reason, file, match)) {
+      this.app.workspace.trigger("periodic-notes:empty-note-created", file, match);
     }
   }
 

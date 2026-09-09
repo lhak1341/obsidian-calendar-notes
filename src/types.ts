@@ -36,9 +36,6 @@ export interface ResolvedPeriodicConfig extends PeriodicConfig {
 // --- Settings shape ---
 
 export interface ISettings {
-  showGettingStartedBanner: boolean;
-  hasMigratedDailyNoteSettings: boolean;
-  hasMigratedWeeklyNoteSettings: boolean;
   installedVersion: string;
 
   enableTimelineComplication: boolean;

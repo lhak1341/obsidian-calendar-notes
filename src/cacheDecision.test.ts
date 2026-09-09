@@ -1,7 +1,7 @@
 import moment from "moment";
 import { beforeAll, describe, expect, it } from "vitest";
 
-import { decide, type MatchInput } from "./cacheDecision";
+import { decide, shouldSeedEmptyNote, type MatchInput } from "./cacheDecision";
 import { DEFAULT_SETTINGS } from "./settings/defaults";
 import type { ISettings, PeriodicNoteCachedMetadata } from "./types";
 
@@ -126,5 +126,47 @@ describe("decide", () => {
     );
 
     expect(match?.matchData).toEqual({ exact: true, matchType: "filename" });
+  });
+});
+
+describe("shouldSeedEmptyNote", () => {
+  const strictMatch: PeriodicNoteCachedMetadata = {
+    filePath: "2024-01-15.md",
+    date: moment("2024-01-15", "YYYY-MM-DD"),
+    granularity: "day",
+    canonicalDateStr: moment("2024-01-15", "YYYY-MM-DD").toISOString(),
+    matchData: { exact: true, matchType: "filename" },
+  };
+
+  it("seeds an empty file freshly created with a strict filename match", () => {
+    expect(shouldSeedEmptyNote("create", { stat: { size: 0 } }, strictMatch)).toBe(true);
+  });
+
+  it("does not seed on rename, even if empty and strictly matched", () => {
+    expect(shouldSeedEmptyNote("rename", { stat: { size: 0 } }, strictMatch)).toBe(false);
+  });
+
+  it("does not seed on startup indexing", () => {
+    expect(shouldSeedEmptyNote("initialize", { stat: { size: 0 } }, strictMatch)).toBe(false);
+  });
+
+  it("does not seed a file that already has content", () => {
+    expect(shouldSeedEmptyNote("create", { stat: { size: 42 } }, strictMatch)).toBe(false);
+  });
+
+  it("does not seed a loose (non-exact) filename match", () => {
+    const looseMatch: PeriodicNoteCachedMetadata = {
+      ...strictMatch,
+      matchData: { exact: false, matchType: "filename" },
+    };
+    expect(shouldSeedEmptyNote("create", { stat: { size: 0 } }, looseMatch)).toBe(false);
+  });
+
+  it("does not seed a frontmatter match", () => {
+    const frontmatterMatch: PeriodicNoteCachedMetadata = {
+      ...strictMatch,
+      matchData: { exact: true, matchType: "frontmatter" },
+    };
+    expect(shouldSeedEmptyNote("create", { stat: { size: 0 } }, frontmatterMatch)).toBe(false);
   });
 });

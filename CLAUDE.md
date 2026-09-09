@@ -13,6 +13,11 @@ Repo-specific gotchas below.
   `src/__mocks__/obsidian.ts` — Obsidian-runtime globals like `window.moment` are NOT
   polyfilled. Any test touching code that calls `window.moment(...)` needs
   `window.moment = moment` set explicitly (e.g. in `beforeAll`).
+- No App/Vault fake exists (see above) — pure-logic modules that need vault/plugin I/O
+  should take narrow function-shaped ports as params instead (e.g. `noteCreation.ts`'s
+  `NoteCreationPorts`, `dateSuggestions.ts`'s `parseDate`), so tests stub plain functions
+  rather than building an `App`/`Vault` fake.
 - Every note-creation trigger (command, ribbon icon, calendar click, next/prev nav,
-  startup auto-open) funnels through `createPeriodicNote` in `src/main.ts` — hook
-  creation-time behavior there, not at individual call sites.
+  startup auto-open) funnels through `createPeriodicNote` in `src/main.ts`, which
+  delegates to `createNoteFromTemplate` in `src/noteCreation.ts` — hook creation-time
+  behavior (template, rollover, write order) there, not in `main.ts`.

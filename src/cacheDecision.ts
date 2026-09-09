@@ -71,3 +71,21 @@ export function decide(
 
   return matchByLooseGuess(input);
 }
+
+export type ResolveReason = "create" | "rename" | "initialize";
+
+/**
+ * A freshly-created, empty file that strictly matches a periodic format is a
+ * blank note the user just made from the calendar/ribbon/command — seed it
+ * from its template. Renames, startup indexing, and loose/frontmatter
+ * matches never qualify.
+ */
+export function shouldSeedEmptyNote(
+  reason: ResolveReason,
+  file: { stat: { size: number } },
+  match: PeriodicNoteCachedMetadata
+): boolean {
+  const isStrictFilenameMatch =
+    match.matchData.matchType === "filename" && match.matchData.exact;
+  return reason === "create" && file.stat.size === 0 && isStrictFilenameMatch;
+}

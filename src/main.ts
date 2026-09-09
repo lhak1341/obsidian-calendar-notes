@@ -16,14 +16,13 @@ import {
 } from "./icons";
 import { addLegacySettingsCompat, type SettingsStore } from "./legacySettingsCompat";
 import { showFileMenu } from "./modal";
-import { extractUnfinishedSection, insertRolledOverItems } from "./rollover";
-import {
-  type ISettings,
-  PeriodicNotesSettingsTab,
-  DEFAULT_SETTINGS,
-  DEFAULT_PERIODIC_CONFIG,
-} from "./settings";
+import { createNoteFromTemplate, type NoteCreationPorts } from "./noteCreation";
+import { type ISettings, PeriodicNotesSettingsTab } from "./settings";
 import { initializeLocaleConfigOnce } from "./settings/localization";
+import {
+  migrateLegacySettings,
+  type LegacyPluginData,
+} from "./settings/migrateLegacySettings";
 import {
   findStartupNoteConfig,
   hasLegacyDailyNoteSettings,
@@ -39,37 +38,11 @@ import {
   type PeriodicNoteCachedMetadata,
 } from "./types";
 import {
-  applyTemplateTransformations,
+  applyPeriodicTemplateToFile,
   getNoteCreationPath,
   getTemplateContents,
   isMetaPressed,
 } from "./utils";
-
-// Shape of the old calendarSets-based data.json (for migration)
-interface LegacyCalendarSetData {
-  id: string;
-  day?: PeriodicConfig;
-  week?: PeriodicConfig;
-  month?: PeriodicConfig;
-  quarter?: PeriodicConfig;
-  year?: PeriodicConfig;
-}
-
-interface LegacyPeriodicitySettings {
-  enabled: boolean;
-  folder?: string;
-  format?: string;
-  template?: string;
-}
-
-interface LegacyPluginData {
-  daily?: LegacyPeriodicitySettings;
-  weekly?: LegacyPeriodicitySettings;
-  monthly?: LegacyPeriodicitySettings;
-  quarterly?: LegacyPeriodicitySettings;
-  yearly?: LegacyPeriodicitySettings;
-  calendarSets?: LegacyCalendarSetData[];
-}
 
 export default class PeriodicNotesPlugin extends Plugin implements IPeriodicNoteController {
   public settings!: SettingsStore;
@@ -97,6 +70,12 @@ export default class PeriodicNotesPlugin extends Plugin implements IPeriodicNote
     this.settings = addLegacySettingsCompat(writable<ISettings>());
     await this.loadSettings();
     this.register(this.settings.subscribe(this.onUpdateSettings.bind(this)));
+
+    this.registerEvent(
+      this.app.workspace.on("periodic-notes:empty-note-created", (file, match) =>
+        applyPeriodicTemplateToFile(this.app, file, get(this.settings), match)
+      )
+    );
 
     initializeLocaleConfigOnce(this.app);
 
@@ -188,50 +167,8 @@ export default class PeriodicNotesPlugin extends Plugin implements IPeriodicNote
   }
 
   async loadSettings(): Promise<void> {
-    const savedData = (await this.loadData()) as LegacyPluginData & Partial<ISettings> | null;
-    let settings: ISettings = Object.assign({}, DEFAULT_SETTINGS, savedData || {});
-
-    // Migration 1: old calendarSets array → flat fields
-    // Note: run BEFORE Object.assign so defaults don't mask real values
-    if (savedData?.calendarSets?.length) {
-      const set = savedData.calendarSets[0];
-      for (const g of granularities) {
-        if (set[g]) settings[g] = set[g];
-      }
-      // Remove the old keys to keep data.json clean on next save
-      delete (settings as unknown as Record<string, unknown>).calendarSets;
-      delete (settings as unknown as Record<string, unknown>).activeCalendarSet;
-    }
-    // Migration 2: very old daily/weekly/etc. format
-    else if (
-      savedData?.daily ||
-      savedData?.weekly ||
-      savedData?.monthly ||
-      savedData?.quarterly ||
-      savedData?.yearly
-    ) {
-      const migrateConfig = (src: LegacyPeriodicitySettings | undefined): PeriodicConfig => ({
-        enabled: src?.enabled ?? false,
-        format: src?.format || "",
-        folder: src?.folder || "",
-        openAtStartup: false,
-        templatePath: src?.template,
-      });
-      if (savedData.daily) settings.day = migrateConfig(savedData.daily);
-      if (savedData.weekly) settings.week = migrateConfig(savedData.weekly);
-      if (savedData.monthly) settings.month = migrateConfig(savedData.monthly);
-      if (savedData.quarterly) settings.quarter = migrateConfig(savedData.quarterly);
-      if (savedData.yearly) settings.year = migrateConfig(savedData.yearly);
-    }
-    // Migration 3: very old Obsidian daily-notes plugin settings
-    else if (!savedData?.day && hasLegacyDailyNoteSettings(this.app)) {
-      settings.day = {
-        ...DEFAULT_PERIODIC_CONFIG,
-        enabled: true,
-      };
-    }
-
-    this.settings.set(settings);
+    const savedData = (await this.loadData()) as (LegacyPluginData & Partial<ISettings>) | null;
+    this.settings.set(migrateLegacySettings(savedData, hasLegacyDailyNoteSettings(this.app)));
   }
 
   private async onUpdateSettings(newSettings: ISettings): Promise<void> {
@@ -256,51 +193,34 @@ export default class PeriodicNotesPlugin extends Plugin implements IPeriodicNote
     }
   }
 
+  private noteCreationPorts(): NoteCreationPorts {
+    const { vault } = this.app;
+    return {
+      readTemplate: (path) => getTemplateContents(this.app, path),
+      resolvePath: (filename, cfg) => getNoteCreationPath(this.app, filename, cfg),
+      createNote: (path, contents) => vault.create(path, contents),
+      findNearestBeforePath: (date) => this.cache.findNearestBefore("day", date)?.filePath ?? null,
+      readSource: async (path) => {
+        const file = vault.getAbstractFileByPath(path);
+        return file instanceof TFile ? vault.cachedRead(file) : null;
+      },
+      modifySource: async (path, contents) => {
+        const file = vault.getAbstractFileByPath(path);
+        if (file instanceof TFile) await vault.modify(file, contents);
+      },
+    };
+  }
+
   public async createPeriodicNote(
     granularity: Granularity,
     date: Moment
   ): Promise<TFile> {
     const s = get(this.settings);
     const cfg = configFor(s, granularity);
-    const filename = date.format(cfg.format);
-    const templateContents = await getTemplateContents(this.app, cfg.templatePath);
-    let renderedContents = applyTemplateTransformations(
-      filename,
-      granularity,
-      date,
-      cfg.format,
-      templateContents
-    );
+    const rollover =
+      s.rolloverUnfinishedTasks && s.rolloverHeading ? { heading: s.rolloverHeading } : null;
 
-    let rolloverSource: { file: TFile; remainingContent: string } | null = null;
-    if (granularity === "day" && s.rolloverUnfinishedTasks && s.rolloverHeading) {
-      const nearest = this.cache.findNearestBefore("day", date);
-      const sourceFile = nearest
-        ? this.app.vault.getAbstractFileByPath(nearest.filePath)
-        : null;
-      if (sourceFile instanceof TFile) {
-        const sourceContent = await this.app.vault.cachedRead(sourceFile);
-        const { remainingContent, itemsText } = extractUnfinishedSection(
-          sourceContent,
-          s.rolloverHeading
-        );
-        if (itemsText) {
-          renderedContents = insertRolledOverItems(renderedContents, s.rolloverHeading, itemsText);
-          rolloverSource = { file: sourceFile, remainingContent };
-        }
-      }
-    }
-
-    const destPath = await getNoteCreationPath(this.app, filename, cfg);
-    const file = await this.app.vault.create(destPath, renderedContents);
-
-    // Only strip the source note after the new note is safely created, so a
-    // failure here duplicates a task instead of losing it.
-    if (rolloverSource) {
-      await this.app.vault.modify(rolloverSource.file, rolloverSource.remainingContent);
-    }
-
-    return file;
+    return createNoteFromTemplate(this.noteCreationPorts(), granularity, date, cfg, rollover);
   }
 
   public getPeriodicNote(granularity: Granularity, date: Moment): TFile | null {

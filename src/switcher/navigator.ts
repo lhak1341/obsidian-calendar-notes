@@ -1,22 +1,10 @@
-import type { Moment } from "moment";
 import { type NLDatesPlugin, setIcon, App, SuggestModal, TFile } from "obsidian";
 
-import { isIsoFormat } from "src/calendarSet";
 import { DEFAULT_FORMAT } from "src/constants";
-import type { MatchType } from "src/types";
-import { getRelativeDate, isMetaPressed, join } from "src/utils";
+import { generateDateSuggestions, type DateNavigationItem } from "src/dateSuggestions";
+import { isMetaPressed, join } from "src/utils";
 
-import type { Granularity, INoteIndex, INoteOps } from "../types";
-
-export interface DateNavigationItem {
-  granularity: Granularity;
-  date: Moment;
-  label: string;
-  matchData?: {
-    exact: boolean;
-    matchType: MatchType;
-  };
-}
+import type { INoteIndex, INoteOps } from "../types";
 
 const NAVIGATOR_INSTRUCTIONS = [
   { command: "⇥", purpose: "show related files" },
@@ -65,131 +53,13 @@ export class NLDNavigator extends SuggestModal<DateNavigationItem> {
     return (this as any).chooser.values[(this as any).chooser.selectedItem];
   }
 
-  /** XXX: this is pretty messy currently. Not sure if I like the format yet */
-  private getPeriodicNotesFromQuery(query: string, date: Moment) {
-    let granularity: Granularity = "day";
-
-    const granularityExp = /\b(week|month|quarter|year)s?\b/.exec(query);
-    if (granularityExp) {
-      granularity = granularityExp[1] as Granularity;
-    }
-
-    let label = "";
-    if (granularity === "week") {
-      const format = this.plugin.getFormat("week");
-      const weekNumber = isIsoFormat(format) ? "WW" : "ww";
-      label = date.format(`GGGG [Week] ${weekNumber}`);
-    } else if (granularity === "day") {
-      label = `${getRelativeDate(granularity, date)}, ${date.format("MMMM DD")}`;
-    } else {
-      label = query;
-    }
-
-    const suggestions = [
-      {
-        label,
-        date,
-        granularity,
-      },
-    ];
-
-    if (granularity !== "day") {
-      suggestions.push({
-        label: `${getRelativeDate(granularity, date)}, ${date.format("MMMM DD")}`,
-        date,
-        granularity: "day",
-      });
-    }
-
-    return suggestions;
-  }
-
   getSuggestions(query: string): DateNavigationItem[] {
-    const dateInQuery = this.nlDatesPlugin.parseDate(query);
-    const quickSuggestions = this.getDateSuggestions(query);
-
-    if (quickSuggestions.length) {
-      return quickSuggestions;
-    }
-
-    if (dateInQuery.moment.isValid()) {
-      return this.getPeriodicNotesFromQuery(query, dateInQuery.moment);
-    }
-    return [];
-  }
-
-  getDateSuggestions(query: string): DateNavigationItem[] {
-    const activeGranularities = this.plugin.getActiveGranularities();
-    const getSuggestion = (dateStr: string, granularity: Granularity) => {
-      const date = this.nlDatesPlugin.parseDate(dateStr);
-      return {
-        granularity,
-        date: date.moment,
-        label: dateStr,
-      };
-    };
-
-    const relativeExpr = query.match(/(next|last|this)/i);
-    if (relativeExpr) {
-      const reference = relativeExpr[1];
-      return [
-        getSuggestion(`${reference} Sunday`, "day"),
-        getSuggestion(`${reference} Monday`, "day"),
-        getSuggestion(`${reference} Tuesday`, "day"),
-        getSuggestion(`${reference} Wednesday`, "day"),
-        getSuggestion(`${reference} Thursday`, "day"),
-        getSuggestion(`${reference} Friday`, "day"),
-        getSuggestion(`${reference} Saturday`, "day"),
-        getSuggestion(`${reference} week`, "week"),
-        getSuggestion(`${reference} month`, "month"),
-        // getSuggestion(`${reference} quarter`, "quarter"), TODO include once nldates supports quarters
-        getSuggestion(`${reference} year`, "year"),
-      ]
-        .filter((items) => activeGranularities.includes(items.granularity))
-        .filter((items) => items.label.toLowerCase().startsWith(query));
-    }
-
-    const relativeDate = query.match(/^in ([+-]?\d+)/i) || query.match(/^([+-]?\d+)/i);
-    if (relativeDate) {
-      const timeDelta = relativeDate[1];
-      return [
-        getSuggestion(`in ${timeDelta} days`, "day"),
-        getSuggestion(`in ${timeDelta} weeks`, "day"),
-        getSuggestion(`in ${timeDelta} weeks`, "week"),
-        getSuggestion(`in ${timeDelta} months`, "month"),
-        getSuggestion(`in ${timeDelta} years`, "day"),
-        getSuggestion(`in ${timeDelta} years`, "year"),
-        getSuggestion(`${timeDelta} days ago`, "day"),
-        getSuggestion(`${timeDelta} weeks ago`, "day"),
-        getSuggestion(`${timeDelta} weeks ago`, "week"),
-        getSuggestion(`${timeDelta} months ago`, "month"),
-        getSuggestion(`${timeDelta} years ago`, "day"),
-        getSuggestion(`${timeDelta} years ago`, "year"),
-      ]
-        .filter((items) => activeGranularities.includes(items.granularity))
-        .filter((item) => item.label.toLowerCase().startsWith(query));
-    }
-
-    return [
-      getSuggestion("today", "day"),
-      getSuggestion("yesterday", "day"),
-      getSuggestion("tomorrow", "day"),
-      getSuggestion("this week", "week"),
-      getSuggestion("last week", "week"),
-      getSuggestion("next week", "week"),
-      getSuggestion("this month", "month"),
-      getSuggestion("last month", "month"),
-      getSuggestion("next month", "month"),
-      // TODO - requires adding new parser to NLDates
-      // getSuggestion("this quarter", "quarter"),
-      // getSuggestion("last quarter", "quarter"),
-      // getSuggestion("next quarter", "quarter"),
-      getSuggestion("this year", "year"),
-      getSuggestion("last year", "year"),
-      getSuggestion("next year", "year"),
-    ]
-      .filter((items) => activeGranularities.includes(items.granularity))
-      .filter((items) => items.label.toLowerCase().startsWith(query));
+    return generateDateSuggestions(
+      query,
+      this.plugin.getActiveGranularities(),
+      (dateStr) => this.nlDatesPlugin.parseDate(dateStr),
+      this.plugin.getFormat("week")
+    );
   }
 
   renderSuggestion(value: DateNavigationItem, el: HTMLElement) {
