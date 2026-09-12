@@ -10,10 +10,20 @@ jobs:
   lint-and-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
-      - name: Install modules
-        run: yarn
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.0
 
+      # This repo commits bun.lock and no yarn.lock, so the previous bare
+      # `yarn` step resolved dependency versions afresh on every run.
+      # --frozen-lockfile installs exactly what the lockfile pins and fails
+      # if the lockfile and package.json have drifted apart.
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      # `lint` is svelte-check + eslint + tsc --noEmit, so this is the
+      # typecheck gate as well.
       - name: Lint
-        run: yarn run lint
+        run: bun run lint
