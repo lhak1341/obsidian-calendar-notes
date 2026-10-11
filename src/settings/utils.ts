@@ -1,16 +1,8 @@
-import { App, DailyNotesPlugin, type DailyNotesSettings } from "obsidian";
+import type { App, DailyNotesPlugin } from "obsidian";
 import { get, type Readable } from "svelte/store";
 
 import type { Granularity, ISettings } from "src/types";
 import { granularities } from "src/types";
-
-export const wrapAround = (value: number, size: number): number => {
-  return ((value % size) + size) % size;
-};
-
-export function isDailyNotesPluginEnabled(app: App): boolean {
-  return app.internalPlugins.getPluginById("daily-notes").enabled;
-}
 
 function getDailyNotesPlugin(app: App): DailyNotesPlugin | null {
   const installedPlugin = app.internalPlugins.getPluginById("daily-notes");
@@ -23,33 +15,6 @@ function getDailyNotesPlugin(app: App): DailyNotesPlugin | null {
 export function hasLegacyDailyNoteSettings(app: App): boolean {
   const options = getDailyNotesPlugin(app)?.options || {};
   return !!(options.format || options.folder || options.template);
-}
-
-export function getLegacyDailyNoteSettings(app: App): DailyNotesSettings {
-  const dailyNotesInstalledPlugin = app.internalPlugins.plugins["daily-notes"];
-  if (!dailyNotesInstalledPlugin) {
-    return {
-      folder: "",
-      template: "",
-      format: "",
-    };
-  }
-
-  const options = {
-    format: "",
-    folder: "",
-    template: "",
-    ...getDailyNotesPlugin(app)?.options,
-  };
-  return {
-    format: options.format,
-    folder: options.folder?.trim(),
-    template: options.template?.trim(),
-  };
-}
-
-export function disableDailyNotesPlugin(app: App): void {
-  app.internalPlugins.getPluginById("daily-notes").disable(true);
 }
 
 export function getLocaleOptions() {

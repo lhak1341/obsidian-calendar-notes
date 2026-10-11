@@ -80,4 +80,32 @@ export default [
       "obsidianmd/prefer-instanceof": "warn",
     },
   },
+  {
+    // moment ships with Obsidian (window.moment); a value import bundles a second copy.
+    // Type imports are erased, so they stay allowed. Svelte files are not linted here.
+    files: ["src/**/*.ts"],
+    ignores: ["**/*.test.ts", "src/__mocks__/**"],
+    plugins: { "@typescript-eslint": tsPlugin },
+    rules: {
+      "@typescript-eslint/no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "moment",
+              message: "Use window.moment; a value import bundles a second copy of moment.",
+              allowTypeImports: true,
+            },
+          ],
+          patterns: [
+            {
+              group: ["moment/*"],
+              message: "Use window.moment; a value import bundles a second copy of moment.",
+              allowTypeImports: true,
+            },
+          ],
+        },
+      ],
+    },
+  },
 ];

@@ -59,15 +59,18 @@ export interface ILocalizationSettings {
   weekStart: IWeekStartOption;
 }
 
-function overrideGlobalMomentWeekStart(weekStart: IWeekStartOption): void {
+export function overrideGlobalMomentWeekStart(weekStart: IWeekStartOption): void {
   const { moment } = window;
   const currentLocale = moment.locale();
 
   // Save the initial locale weekspec so that we can restore
   // it when toggling between the different options in settings.
   if (!window._bundledLocaleWeekSpec) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    window._bundledLocaleWeekSpec = (<any>moment.localeData())._week;
+    const localeData = moment.localeData();
+    window._bundledLocaleWeekSpec = {
+      dow: localeData.firstDayOfWeek(),
+      doy: localeData.firstDayOfYear(),
+    };
   }
 
   if (weekStart === "locale") {

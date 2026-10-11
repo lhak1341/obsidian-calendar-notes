@@ -37,7 +37,7 @@ export function splitFormatSegments(format: string): string[] {
   return segments;
 }
 
-export function getBasename(format: string): string {
+function getBasename(format: string): string {
   return splitFormatSegments(format).pop() ?? "";
 }
 

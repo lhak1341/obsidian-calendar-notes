@@ -1,6 +1,7 @@
 import type { Moment } from "moment";
 
 import { configFor } from "./calendarSet";
+import { DEFAULT_FORMAT } from "./constants";
 import { getLooselyMatchedDate } from "./parser";
 import { getDateInput } from "./settings/validation";
 import type { Granularity, ISettings, PeriodicNoteCachedMetadata } from "./types";
@@ -10,9 +11,12 @@ export interface MatchInput {
   basename: string;
   extension: string;
   size: number;
+  // Raw string frontmatter values keyed by granularity (`day: 2024-01-15`).
+  // Extracting them from Obsidian's metadata cache is the caller's job.
+  frontmatter: Partial<Record<Granularity, string>>;
 }
 
-export function getCanonicalDateString(date: Moment): string {
+function getCanonicalDateString(date: Moment): string {
   return date.toISOString();
 }
 
@@ -37,6 +41,32 @@ function matchByFilename(
   };
 }
 
+// Frontmatter dates are always ISO-style (DEFAULT_FORMAT), whatever the
+// filename format is. An unparseable value is skipped, not fatal.
+function matchByFrontmatter(
+  input: MatchInput,
+  settings: ISettings,
+  activeGranularities: Granularity[]
+): PeriodicNoteCachedMetadata | null {
+  for (const granularity of activeGranularities) {
+    const value = input.frontmatter[granularity];
+    if (value === undefined) continue;
+    if (!input.path.startsWith(configFor(settings, granularity).folder)) continue;
+
+    const date = window.moment(value, DEFAULT_FORMAT[granularity], true);
+    if (!date.isValid()) continue;
+
+    return {
+      filePath: input.path,
+      date,
+      granularity,
+      canonicalDateStr: getCanonicalDateString(date),
+      matchData: { exact: true, matchType: "frontmatter" },
+    };
+  }
+  return null;
+}
+
 function matchByLooseGuess(input: MatchInput): PeriodicNoteCachedMetadata | null {
   const nonStrictDate = getLooselyMatchedDate(input.basename);
   if (!nonStrictDate) return null;
@@ -52,17 +82,17 @@ function matchByLooseGuess(input: MatchInput): PeriodicNoteCachedMetadata | null
 
 /**
  * Given a file and the active granularities, decide which periodic note (if
- * any) it matches, and with what precedence. Frontmatter matches (decided
- * elsewhere, in PeriodicNotesCache.resolveChangedMetadata) always outrank
- * filename and loose matches — this function refuses to override one.
+ * any) it matches. Stateless: the same input always gives the same answer,
+ * whatever events led here. Precedence: frontmatter, then strict filename
+ * (granularities in order), then a loose guess from the filename.
  */
 export function decide(
   input: MatchInput,
   settings: ISettings,
-  activeGranularities: Granularity[],
-  existing: PeriodicNoteCachedMetadata | undefined
+  activeGranularities: Granularity[]
 ): PeriodicNoteCachedMetadata | null {
-  if (existing?.matchData.matchType === "frontmatter") return null;
+  const frontmatterMatch = matchByFrontmatter(input, settings, activeGranularities);
+  if (frontmatterMatch) return frontmatterMatch;
 
   for (const granularity of activeGranularities) {
     const match = matchByFilename(input, settings, granularity);
@@ -72,7 +102,7 @@ export function decide(
   return matchByLooseGuess(input);
 }
 
-export type ResolveReason = "create" | "rename" | "initialize";
+export type ResolveReason = "create" | "rename" | "initialize" | "metadata";
 
 /**
  * A freshly-created, empty file that strictly matches a periodic format is a

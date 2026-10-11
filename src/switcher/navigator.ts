@@ -4,7 +4,7 @@ import { DEFAULT_FORMAT } from "src/constants";
 import { generateDateSuggestions, type DateNavigationItem } from "src/dateSuggestions";
 import { isMetaPressed, join } from "src/utils";
 
-import type { INoteIndex, INoteOps } from "../types";
+import type { IHasNoteIndex, INoteOps } from "../types";
 
 const NAVIGATOR_INSTRUCTIONS = [
   { command: "⇥", purpose: "show related files" },
@@ -16,7 +16,7 @@ const NAVIGATOR_INSTRUCTIONS = [
 export class NLDNavigator extends SuggestModal<DateNavigationItem> {
   private nlDatesPlugin: NLDatesPlugin;
 
-  constructor(readonly app: App, readonly plugin: INoteOps & INoteIndex) {
+  constructor(readonly app: App, readonly plugin: INoteOps & IHasNoteIndex) {
     super(app);
 
     this.setInstructions(NAVIGATOR_INSTRUCTIONS);
@@ -58,19 +58,19 @@ export class NLDNavigator extends SuggestModal<DateNavigationItem> {
       query,
       this.plugin.getActiveGranularities(),
       (dateStr) => this.nlDatesPlugin.parseDate(dateStr),
-      this.plugin.getFormat("week")
+      this.plugin.getActiveConfig("week").format
     );
   }
 
   renderSuggestion(value: DateNavigationItem, el: HTMLElement) {
-    const numRelatedNotes = this.plugin
+    const numRelatedNotes = this.plugin.cache
       .getPeriodicNotes(value.granularity, value.date)
       .filter((e) => e.matchData.exact === false).length;
 
-    const periodicNote = this.plugin.getPeriodicNote(value.granularity, value.date);
+    const periodicNote = this.plugin.cache.getPeriodicNote(value.granularity, value.date);
 
     if (!periodicNote) {
-      const format = this.plugin.getFormat(value.granularity);
+      const format = this.plugin.getActiveConfig(value.granularity).format;
       const folder = this.plugin.getActiveConfig(value.granularity).folder || "/";
       el.setText(value.label);
       el.createSpan({ cls: "suggestion-flair", prepend: true }, (el) => {
@@ -113,13 +113,13 @@ const RELATED_FILES_INSTRUCTIONS = [
   { command: "esc", purpose: "to dismiss" },
 ];
 
-export class RelatedFilesSwitcher extends SuggestModal<DateNavigationItem> {
+class RelatedFilesSwitcher extends SuggestModal<DateNavigationItem> {
   private inputLabel!: HTMLElement;
   private includeFinerGranularities: boolean;
 
   constructor(
     readonly app: App,
-    readonly plugin: INoteOps & INoteIndex,
+    readonly plugin: INoteOps & IHasNoteIndex,
     readonly selectedItem: DateNavigationItem,
     readonly oldQuery: string
   ) {
@@ -160,7 +160,7 @@ export class RelatedFilesSwitcher extends SuggestModal<DateNavigationItem> {
     item: DateNavigationItem,
     query: string
   ): DateNavigationItem[] {
-    return this.plugin
+    return this.plugin.cache
       .getPeriodicNotes(item.granularity, item.date, this.includeFinerGranularities)
       .filter((e) => e.matchData.exact === false)
       .filter((e) => e.filePath.toLocaleLowerCase().includes(query.toLocaleLowerCase()))

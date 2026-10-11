@@ -1,12 +1,8 @@
 import moment from "moment";
 import type { NLDResult } from "obsidian";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { generateDateSuggestions } from "./dateSuggestions";
-
-beforeAll(() => {
-  window.moment = moment;
-});
 
 type Moment = ReturnType<typeof moment>;
 

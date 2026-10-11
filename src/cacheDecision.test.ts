@@ -1,16 +1,12 @@
 import moment from "moment";
-import { beforeAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { decide, shouldSeedEmptyNote, type MatchInput } from "./cacheDecision";
 import { DEFAULT_SETTINGS } from "./settings/defaults";
 import type { ISettings, PeriodicNoteCachedMetadata } from "./types";
 
-beforeAll(() => {
-  window.moment = moment;
-});
-
 function input(overrides: Partial<MatchInput> = {}): MatchInput {
-  return { path: "", basename: "", extension: "md", size: 0, ...overrides };
+  return { path: "", basename: "", extension: "md", size: 0, frontmatter: {}, ...overrides };
 }
 
 function settingsWith(overrides: Partial<ISettings>): ISettings {
@@ -26,8 +22,7 @@ describe("decide", () => {
     const match = decide(
       input({ path: "2024-01-15.md", basename: "2024-01-15" }),
       settings,
-      ["day"],
-      undefined
+      ["day"]
     );
 
     expect(match?.granularity).toBe("day");
@@ -45,8 +40,7 @@ describe("decide", () => {
     const match = decide(
       input({ path: "2024-W03.md", basename: "2024-W03" }),
       settings,
-      ["day", "week"],
-      undefined
+      ["day", "week"]
     );
 
     expect(match?.granularity).toBe("week");
@@ -61,8 +55,7 @@ describe("decide", () => {
     const match = decide(
       input({ path: "Notes about 20240115 stuff.md", basename: "Notes about 20240115 stuff" }),
       settings,
-      ["day"],
-      undefined
+      ["day"]
     );
 
     expect(match?.granularity).toBe("day");
@@ -77,55 +70,94 @@ describe("decide", () => {
     const match = decide(
       input({ path: "todo-list.md", basename: "todo-list" }),
       settings,
-      ["day"],
-      undefined
+      ["day"]
     );
 
     expect(match).toBeNull();
   });
 
-  it("refuses to override an existing frontmatter match", () => {
-    const settings = settingsWith({
-      day: { enabled: true, openAtStartup: false, format: "YYYY-MM-DD", folder: "" },
-    });
-    const existing: PeriodicNoteCachedMetadata = {
-      filePath: "2024-01-15.md",
-      date: moment("2024-01-15", "YYYY-MM-DD"),
-      granularity: "day",
-      canonicalDateStr: moment("2024-01-15", "YYYY-MM-DD").toISOString(),
-      matchData: { exact: true, matchType: "frontmatter" },
-    };
+  const dayCfg = { enabled: true, openAtStartup: false, format: "YYYY-MM-DD", folder: "" };
 
+  it("lets frontmatter outrank a strict filename match", () => {
     const match = decide(
-      input({ path: "2024-01-15.md", basename: "2024-01-15" }),
-      settings,
-      ["day"],
-      existing
+      input({
+        path: "2024-01-15.md",
+        basename: "2024-01-15",
+        frontmatter: { day: "2024-02-20" },
+      }),
+      settingsWith({ day: dayCfg }),
+      ["day"]
     );
 
-    expect(match).toBeNull();
+    expect(match?.matchData).toEqual({ exact: true, matchType: "frontmatter" });
+    expect(match?.date.format("YYYY-MM-DD")).toBe("2024-02-20");
   });
 
-  it("overrides an existing non-frontmatter match with a new filename match", () => {
-    const settings = settingsWith({
-      day: { enabled: true, openAtStartup: false, format: "YYYY-MM-DD", folder: "" },
-    });
-    const existing: PeriodicNoteCachedMetadata = {
-      filePath: "2024-01-15.md",
-      date: moment("2024-01-15"),
-      granularity: "day",
-      canonicalDateStr: moment("2024-01-15").toISOString(),
-      matchData: { exact: false, matchType: "filename" },
-    };
-
+  it("falls back to the filename when there is no frontmatter", () => {
     const match = decide(
-      input({ path: "2024-01-15.md", basename: "2024-01-15" }),
-      settings,
-      ["day"],
-      existing
+      input({ path: "2024-01-15.md", basename: "2024-01-15", frontmatter: {} }),
+      settingsWith({ day: dayCfg }),
+      ["day"]
     );
 
     expect(match?.matchData).toEqual({ exact: true, matchType: "filename" });
+  });
+
+  it("reads frontmatter as ISO even when the filename format is different", () => {
+    const match = decide(
+      input({ path: "note.md", basename: "note", frontmatter: { day: "2024-01-15" } }),
+      settingsWith({ day: { ...dayCfg, format: "YYMMDD" } }),
+      ["day"]
+    );
+
+    expect(match?.date.format("YYYY-MM-DD")).toBe("2024-01-15");
+  });
+
+  it("skips an unparseable frontmatter value and uses the next valid one", () => {
+    const match = decide(
+      input({
+        path: "note.md",
+        basename: "note",
+        frontmatter: { day: "not a date", week: "2024-W03" },
+      }),
+      settingsWith({
+        day: dayCfg,
+        week: { enabled: true, openAtStartup: false, format: "gggg-[W]ww", folder: "" },
+      }),
+      ["day", "week"]
+    );
+
+    expect(match?.granularity).toBe("week");
+    expect(match?.matchData.matchType).toBe("frontmatter");
+  });
+
+  it("ignores frontmatter for a granularity whose folder does not contain the file", () => {
+    const match = decide(
+      input({ path: "elsewhere/note.md", basename: "note", frontmatter: { day: "2024-01-15" } }),
+      settingsWith({ day: { ...dayCfg, folder: "daily" } }),
+      ["day"]
+    );
+
+    expect(match).toBeNull();
+  });
+
+  it("is stateless: same input, same answer", () => {
+    const run = () =>
+      decide(
+        input({
+          path: "2024-01-15.md",
+          basename: "2024-01-15",
+          frontmatter: { day: "2024-02-20" },
+        }),
+        settingsWith({ day: dayCfg }),
+        ["day"]
+      );
+
+    const first = run();
+    const second = run();
+
+    expect(second?.canonicalDateStr).toBe(first?.canonicalDateStr);
+    expect(second?.matchData).toEqual(first?.matchData);
   });
 });
 

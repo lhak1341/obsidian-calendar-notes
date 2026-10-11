@@ -1,4 +1,3 @@
-import sortBy from "lodash/sortBy";
 import type { Moment } from "moment";
 import {
   App,
@@ -11,46 +10,35 @@ import {
 } from "obsidian";
 import { get, type Readable } from "svelte/store";
 
-import {
-  decide,
-  getCanonicalDateString,
-  shouldSeedEmptyNote,
-  type ResolveReason,
-} from "./cacheDecision";
-import { DEFAULT_CALENDARSET_ID } from "./constants";
-import { DEFAULT_FORMAT } from "./constants";
+import { decide, shouldSeedEmptyNote, type MatchInput, type ResolveReason } from "./cacheDecision";
+import { PeriodicNoteIndex } from "./periodicNoteIndex";
 import {
   granularities,
   type Granularity,
+  type INoteIndex,
   type ISettings,
   type PeriodicConfig,
   type PeriodicNoteCachedMetadata,
 } from "./types";
 
-function compareGranularity(a: Granularity, b: Granularity) {
-  const idxA = granularities.indexOf(a);
-  const idxB = granularities.indexOf(b);
-  if (idxA === idxB) return 0;
-  if (idxA < idxB) return -1;
-  return 1;
-}
-
-export class PeriodicNotesCache extends Component {
-  public cachedFiles: Map<string, PeriodicNoteCachedMetadata>;
+// Feeds the PeriodicNoteIndex from vault and metadata events. The decision of
+// what a file is lives in cacheDecision.decide; the queries live in the index.
+export class PeriodicNotesCache extends Component implements INoteIndex {
+  private index = new PeriodicNoteIndex();
 
   constructor(readonly app: App, readonly settingsStore: Readable<ISettings>) {
     super();
-    this.cachedFiles = new Map();
 
     this.app.workspace.onLayoutReady(() => {
       console.info("[Periodic Notes] initializing cache");
       this.initialize();
       this.registerEvent(
         this.app.vault.on("create", (file) => {
-          if (file instanceof TFile) this.resolve(file, "create");
+          if (file instanceof TFile) this.update(file, "create");
         })
       );
       this.registerEvent(this.app.vault.on("rename", this.resolveRename, this));
+      this.registerEvent(this.app.vault.on("delete", this.resolveDelete, this));
       this.registerEvent(
         this.app.metadataCache.on("changed", this.resolveChangedMetadata, this)
       );
@@ -62,7 +50,7 @@ export class PeriodicNotesCache extends Component {
 
   public reset(): void {
     console.info("[Periodic Notes] resetting cache");
-    this.cachedFiles.clear();
+    this.index.clear();
     this.initialize();
   }
 
@@ -84,95 +72,82 @@ export class PeriodicNotesCache extends Component {
       const rootFolder = this.app.vault.getAbstractFileByPath(config.folder || "/");
       if (!(rootFolder instanceof TFolder)) continue;
 
-      this.recurseChildren(rootFolder, (file) => {
-        this.resolve(file, "initialize");
-        const metadata = this.app.metadataCache.getFileCache(file);
-        if (metadata) {
-          this.resolveChangedMetadata(file, "", metadata);
-        }
-      });
+      this.recurseChildren(rootFolder, (file) => this.update(file, "initialize"));
     }
   }
 
-  private resolveChangedMetadata(
-    file: TFile,
-    _data: string,
-    cache: CachedMetadata
-  ): void {
-    const settings = get(this.settingsStore);
-    const activeGranularities = granularities.filter((g) => settings[g]?.enabled);
-    for (const granularity of activeGranularities) {
-      const folder = settings[granularity]?.folder || "";
-      if (!file.path.startsWith(folder)) continue;
-
-      const frontmatterEntry = parseFrontMatterEntry(cache.frontmatter, granularity);
-      if (!frontmatterEntry) continue;
-
-      if (typeof frontmatterEntry === "string") {
-        const date = window.moment(frontmatterEntry, DEFAULT_FORMAT[granularity], true);
-        if (date.isValid()) {
-          this.cachedFiles.set(file.path, {
-            filePath: file.path,
-            date,
-            granularity,
-            canonicalDateStr: getCanonicalDateString(date),
-            matchData: { exact: true, matchType: "frontmatter" },
-          });
-        }
-        return;
-      }
+  private frontmatterOf(file: TFile, cache?: CachedMetadata | null): MatchInput["frontmatter"] {
+    const frontmatter = (cache ?? this.app.metadataCache.getFileCache(file))?.frontmatter;
+    const out: MatchInput["frontmatter"] = {};
+    for (const granularity of granularities) {
+      const value: unknown = parseFrontMatterEntry(frontmatter, granularity);
+      if (typeof value === "string") out[granularity] = value;
     }
+    return out;
+  }
+
+  // Every metadata change in the vault lands here; only files that are already
+  // indexed or carry a periodic frontmatter key can change the answer, so skip
+  // the rest instead of loosely filename-matching every edited note.
+  private resolveChangedMetadata(file: TFile, _data: string, cache: CachedMetadata): void {
+    const frontmatter = this.frontmatterOf(file, cache);
+    if (!this.index.find(file.path) && Object.keys(frontmatter).length === 0) return;
+    this.update(file, "metadata", frontmatter);
   }
 
   private resolveRename(file: TAbstractFile, oldPath: string): void {
     if (file instanceof TFile) {
-      this.cachedFiles.delete(oldPath);
-      this.resolve(file, "rename");
+      this.index.remove(oldPath);
+      this.update(file, "rename");
     }
   }
 
-  private resolve(file: TFile, reason: ResolveReason = "create"): void {
+  private resolveDelete(file: TAbstractFile): void {
+    if (file instanceof TFile) this.index.remove(file.path);
+    else this.index.removeUnder(file.path);
+  }
+
+  // Re-decide what this file is and bring the index in line, whatever event
+  // got us here. Fires `periodic-notes:resolve` only when the entry changed.
+  private update(
+    file: TFile,
+    reason: ResolveReason,
+    frontmatter: MatchInput["frontmatter"] = this.frontmatterOf(file)
+  ): void {
     const settings = get(this.settingsStore);
     const activeGranularities = granularities.filter((g) => settings[g]?.enabled);
     if (activeGranularities.length === 0) return;
 
-    const existingEntry = this.cachedFiles.get(file.path);
     const match = decide(
       {
         path: file.path,
         basename: file.basename,
         extension: file.extension,
         size: file.stat.size,
+        frontmatter,
       },
       settings,
-      activeGranularities,
-      existingEntry
+      activeGranularities
     );
-    if (!match) return;
+    if (!match) {
+      this.index.remove(file.path);
+      return;
+    }
 
-    this.cachedFiles.set(file.path, match);
-    this.app.workspace.trigger("periodic-notes:resolve", match.granularity, file);
+    if (this.index.set(match)) {
+      this.app.workspace.trigger("periodic-notes:resolve", match.granularity, file);
+    }
 
     if (shouldSeedEmptyNote(reason, file, match)) {
       this.app.workspace.trigger("periodic-notes:empty-note-created", file, match);
     }
   }
 
-  public getPeriodicNote(
-    granularity: Granularity,
-    targetDate: Moment
-  ): TFile | null {
-    for (const [filePath, cacheData] of this.cachedFiles) {
-      if (
-        cacheData.granularity === granularity &&
-        cacheData.matchData.exact === true &&
-        cacheData.date.isSame(targetDate, granularity)
-      ) {
-        const file = this.app.vault.getAbstractFileByPath(filePath);
-        return file instanceof TFile ? file : null;
-      }
-    }
-    return null;
+  public getPeriodicNote(granularity: Granularity, targetDate: Moment): TFile | null {
+    const path = this.index.pathForPeriod(granularity, targetDate);
+    if (!path) return null;
+    const file = this.app.vault.getAbstractFileByPath(path);
+    return file instanceof TFile ? file : null;
   }
 
   public getPeriodicNotes(
@@ -180,47 +155,22 @@ export class PeriodicNotesCache extends Component {
     targetDate: Moment,
     includeFinerGranularities = false
   ): PeriodicNoteCachedMetadata[] {
-    const matches: PeriodicNoteCachedMetadata[] = [];
-    for (const [, cacheData] of this.cachedFiles) {
-      if (
-        (granularity === cacheData.granularity ||
-          (includeFinerGranularities &&
-            compareGranularity(cacheData.granularity, granularity) <= 0)) &&
-        cacheData.date.isSame(targetDate, granularity)
-      ) {
-        matches.push(cacheData);
-      }
-    }
-    return matches;
+    return this.index.getPeriodicNotes(granularity, targetDate, includeFinerGranularities);
   }
 
   public isPeriodic(targetPath: string, granularity?: Granularity): boolean {
-    const metadata = this.cachedFiles.get(targetPath);
-    if (!metadata) return false;
-    return !granularity || granularity === metadata.granularity;
+    return this.index.isPeriodic(targetPath, granularity);
   }
 
   public find(filePath: string | undefined): PeriodicNoteCachedMetadata | null {
-    if (!filePath) return null;
-    return this.cachedFiles.get(filePath) ?? null;
+    return this.index.find(filePath);
   }
 
   public findAdjacent(
     filePath: string,
     direction: "forwards" | "backwards"
   ): PeriodicNoteCachedMetadata | null {
-    const currMetadata = this.find(filePath);
-    if (!currMetadata) return null;
-
-    const granularity = currMetadata.granularity;
-    const sortedCache = sortBy(
-      Array.from(this.cachedFiles.values()).filter((m) => m.granularity === granularity),
-      ["canonicalDateStr"]
-    );
-    const activeNoteIndex = sortedCache.findIndex((m) => m.filePath === filePath);
-
-    const offset = direction === "forwards" ? 1 : -1;
-    return sortedCache[activeNoteIndex + offset];
+    return this.index.findAdjacent(filePath, direction);
   }
 
   // Nearest existing note strictly before `targetDate`, regardless of gaps.
@@ -228,14 +178,6 @@ export class PeriodicNotesCache extends Component {
     granularity: Granularity,
     targetDate: Moment
   ): PeriodicNoteCachedMetadata | null {
-    const candidates = Array.from(this.cachedFiles.values()).filter(
-      (m) => m.granularity === granularity && m.date.isBefore(targetDate, granularity)
-    );
-    if (!candidates.length) return null;
-
-    return sortBy(candidates, ["canonicalDateStr"]).pop() ?? null;
+    return this.index.findNearestBefore(granularity, targetDate);
   }
 }
-
-// Kept for backward-compat with any code still referencing it
-export const CACHE_ID = DEFAULT_CALENDARSET_ID;

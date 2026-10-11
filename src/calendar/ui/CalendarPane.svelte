@@ -40,7 +40,7 @@
   function syncSelectedId() {
     const file = p.app.workspace.getActiveFile();
     if (!file) { selectedId = ""; return; }
-    const meta = p.findInCache(file.path);
+    const meta = p.cache.find(file.path);
     if (!meta) { selectedId = ""; return; }
     if (meta.granularity === "day") selectedId = dayUID(meta.date);
     else if (meta.granularity === "week") selectedId = weekUID(meta.date);
@@ -73,11 +73,11 @@
 
   // ── Note getters ───────────────────────────────────────────────────────────
   function getNoteForDate(date: Moment): TFile | null {
-    return plugin.getPeriodicNote("day", date);
+    return plugin.cache.getPeriodicNote("day", date);
   }
 
   function getNoteForWeek(date: Moment): TFile | null {
-    return plugin.getPeriodicNote("week", date);
+    return plugin.cache.getPeriodicNote("week", date);
   }
 
   // ── Click handlers ─────────────────────────────────────────────────────────
@@ -93,7 +93,7 @@
 
   // ── Context menus ──────────────────────────────────────────────────────────
   function handleContextMenuDay(date: Moment, event: MouseEvent) {
-    const note = plugin.getPeriodicNote("day", date);
+    const note = plugin.cache.getPeriodicNote("day", date);
     const menu = new Menu();
     if (note) {
       menu.addItem((item) =>
@@ -112,7 +112,7 @@
   }
 
   function handleContextMenuWeek(date: Moment, event: MouseEvent) {
-    const note = plugin.getPeriodicNote("week", date);
+    const note = plugin.cache.getPeriodicNote("week", date);
     const menu = new Menu();
     if (note) {
       menu.addItem((item) =>

@@ -23,7 +23,7 @@
   let showComplication = get(settings)?.enableTimelineComplication ?? false;
 
   $: {
-    periodicData = view.file ? plugin.findInCache(view.file.path) : null;
+    periodicData = view.file ? plugin.cache.find(view.file.path) : null;
 
     if (periodicData) {
       weekDays = generateWeekdays(today, periodicData.date);
@@ -49,10 +49,7 @@
     granularity: Granularity,
     date: Moment
   ) {
-    let file = plugin.getPeriodicNote(granularity, date);
-    if (!file) {
-      file = await plugin.createPeriodicNote(granularity, date);
-    }
+    const file = await plugin.getOrCreatePeriodicNote(granularity, date);
     await view.leaf.openFile(file, { active: true });
   }
 
@@ -65,7 +62,7 @@
   }
 
   function updateView() {
-    periodicData = view.file ? plugin.findInCache(view.file.path) : null;
+    periodicData = view.file ? plugin.cache.find(view.file.path) : null;
 
     if (periodicData) {
       weekDays = generateWeekdays(today, periodicData.date);

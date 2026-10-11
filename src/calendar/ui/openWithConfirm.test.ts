@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { openWithConfirm } from "./openWithConfirm";
 
 const makePlugin = (noteExists: boolean) => ({
-  getPeriodicNote: vi.fn().mockReturnValue(noteExists ? {} : null),
+  cache: { getPeriodicNote: vi.fn().mockReturnValue(noteExists ? {} : null) },
   openPeriodicNote: vi.fn().mockResolvedValue(undefined),
 });
 

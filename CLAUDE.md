@@ -10,14 +10,20 @@ Repo-specific gotchas below.
 - `src/settings/` is Svelte 4 (`export let`, `$:`); the calendar UI is Svelte 5 runes.
   Don't mix syntax within either area.
 - `vitest.config.ts` runs jsdom globally and aliases `obsidian` to an empty
-  `src/__mocks__/obsidian.ts` — Obsidian-runtime globals like `window.moment` are NOT
-  polyfilled. Any test touching code that calls `window.moment(...)` needs
-  `window.moment = moment` set explicitly (e.g. in `beforeAll`).
+  `src/__mocks__/obsidian.ts`, so code that reaches `instanceof TFile` or `new Notice`
+  throws under test — keep those branches out of the unit under test.
+  `src/__mocks__/setupMoment.ts` (vitest `setupFiles`) sets `window.moment` for every
+  test; other Obsidian-runtime globals are NOT polyfilled.
+  ESLint bans value imports of `moment` in `src/**/*.ts` (it ships with Obsidian; an
+  import bundles a second copy) — use `window.moment`, `import type` is fine. Svelte
+  files aren't covered by that rule.
 - No App/Vault fake exists (see above) — pure-logic modules that need vault/plugin I/O
   should take narrow function-shaped ports as params instead (e.g. `noteCreation.ts`'s
   `NoteCreationPorts`, `dateSuggestions.ts`'s `parseDate`), so tests stub plain functions
   rather than building an `App`/`Vault` fake.
-- Every note-creation trigger (command, ribbon icon, calendar click, next/prev nav,
-  startup auto-open) funnels through `createPeriodicNote` in `src/main.ts`, which
-  delegates to `createNoteFromTemplate` in `src/noteCreation.ts` — hook creation-time
-  behavior (template, rollover, write order) there, not in `main.ts`.
+- Every note-creation trigger funnels through `src/noteCreation.ts`: command, ribbon
+  icon, calendar click, next/prev nav and startup auto-open via `getOrCreatePeriodicNote`
+  in `src/main.ts` (-> `getOrCreateNote`), and hand-made empty files via the cache's
+  `periodic-notes:empty-note-created` event (-> `seedNoteFromTemplate`). Hook
+  creation-time behavior (template, rollover, write order) there, not in `main.ts`.
+  The Obsidian side of the ports is `src/obsidianNoteCreationPorts.ts` (forwards only).

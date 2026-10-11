@@ -2,7 +2,6 @@ import type { Moment } from "moment";
 import type { App, EventRef, TFile } from "obsidian";
 import type { Readable } from "svelte/store";
 
-export type IPeriodicity = "daily" | "weekly" | "monthly" | "quarterly" | "yearly";
 export type Granularity =
   | "day"
   | "week"
@@ -87,15 +86,15 @@ export interface INoteOps {
   settings: Readable<ISettings>;
 
   openPeriodicNote(granularity: Granularity, date: Moment, opts?: IOpenOpts): Promise<void>;
-  getPeriodicNote(granularity: Granularity, date: Moment): TFile | null;
-  createPeriodicNote(granularity: Granularity, date: Moment): Promise<TFile>;
+  getOrCreatePeriodicNote(granularity: Granularity, date: Moment): Promise<TFile>;
   getActiveGranularities(): Granularity[];
   getActiveConfig(granularity: Granularity): PeriodicConfig;
-  getFormat(granularity: Granularity): string;
 }
 
+// Queries over which vault files are periodic notes. PeriodicNotesCache implements it.
 export interface INoteIndex {
-  findInCache(filePath: string): PeriodicNoteCachedMetadata | null;
+  find(filePath: string | undefined): PeriodicNoteCachedMetadata | null;
+  getPeriodicNote(granularity: Granularity, date: Moment): TFile | null;
   findAdjacent(
     filePath: string,
     direction: "forwards" | "backwards"
@@ -108,7 +107,11 @@ export interface INoteIndex {
   ): PeriodicNoteCachedMetadata[];
 }
 
-export interface IPeriodicNoteController extends INoteOps, INoteIndex {
+export interface IHasNoteIndex {
+  cache: INoteIndex;
+}
+
+export interface IPeriodicNoteController extends INoteOps, IHasNoteIndex {
   app: App;
   registerEvent(eventRef: EventRef): void;
 }

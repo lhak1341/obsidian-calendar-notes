@@ -1,12 +1,12 @@
 import type { Moment } from "moment";
-import { addIcon, Plugin, TFile } from "obsidian";
+import { addIcon, Plugin, type TFile } from "obsidian";
 import { get, writable } from "svelte/store";
 
 import { PeriodicNotesCache } from "./cache";
 import { VIEW_TYPE_CALENDAR } from "./calendar/constants";
 import { CalendarView } from "./calendar/view";
 import { configFor } from "./calendarSet";
-import { displayConfigs, getCommands } from "./commands";
+import { commandIds, displayConfigs, getCommands } from "./commands";
 import {
   calendarDayIcon,
   calendarMonthIcon,
@@ -16,7 +16,8 @@ import {
 } from "./icons";
 import { addLegacySettingsCompat, type SettingsStore } from "./legacySettingsCompat";
 import { showFileMenu } from "./modal";
-import { createNoteFromTemplate, type NoteCreationPorts } from "./noteCreation";
+import { getOrCreateNote, seedNoteFromTemplate } from "./noteCreation";
+import { obsidianNoteCreationPorts } from "./obsidianNoteCreationPorts";
 import { type ISettings, PeriodicNotesSettingsTab } from "./settings";
 import { initializeLocaleConfigOnce } from "./settings/localization";
 import {
@@ -35,20 +36,14 @@ import {
   type IOpenOpts,
   type IPeriodicNoteController,
   type PeriodicConfig,
-  type PeriodicNoteCachedMetadata,
 } from "./types";
-import {
-  applyPeriodicTemplateToFile,
-  getNoteCreationPath,
-  getTemplateContents,
-  isMetaPressed,
-} from "./utils";
+import { isMetaPressed } from "./utils";
 
 export default class PeriodicNotesPlugin extends Plugin implements IPeriodicNoteController {
   public settings!: SettingsStore;
   private ribbonEl: HTMLElement | null = null;
 
-  private cache!: PeriodicNotesCache;
+  public cache!: PeriodicNotesCache;
   private timelineManager!: TimelineManager;
   private settingsTab!: PeriodicNotesSettingsTab;
 
@@ -72,15 +67,26 @@ export default class PeriodicNotesPlugin extends Plugin implements IPeriodicNote
     this.register(this.settings.subscribe(this.onUpdateSettings.bind(this)));
 
     this.registerEvent(
-      this.app.workspace.on("periodic-notes:empty-note-created", (file, match) =>
-        applyPeriodicTemplateToFile(this.app, file, get(this.settings), match)
-      )
+      this.app.workspace.on("periodic-notes:empty-note-created", (file, match) => {
+        const s = get(this.settings);
+        return seedNoteFromTemplate(
+          this.noteCreationPorts(),
+          file.path,
+          file.basename,
+          match.granularity,
+          match.date,
+          configFor(s, match.granularity),
+          s
+        );
+      })
     );
 
     initializeLocaleConfigOnce(this.app);
 
     this.ribbonEl = null;
     this.cache = new PeriodicNotesCache(this.app, this.settings);
+    // Without this the cache's registered events outlive a plugin disable.
+    this.addChild(this.cache);
     this.timelineManager = new TimelineManager(this.app, this, this);
 
     this.openPeriodicNote = this.openPeriodicNote.bind(this);
@@ -155,8 +161,8 @@ export default class PeriodicNotesPlugin extends Plugin implements IPeriodicNote
     granularities
       .filter((granularity) => !s[granularity]?.enabled)
       .forEach((granularity: Granularity) => {
-        getCommands(this.app, this, granularity).forEach((command) =>
-          this.app.commands.removeCommand(`periodic-notes:${command.id}`)
+        commandIds(granularity).forEach((id) =>
+          this.app.commands.removeCommand(`${this.manifest.id}:${id}`)
         );
       });
 
@@ -193,61 +199,19 @@ export default class PeriodicNotesPlugin extends Plugin implements IPeriodicNote
     }
   }
 
-  private noteCreationPorts(): NoteCreationPorts {
-    const { vault } = this.app;
-    return {
-      readTemplate: (path) => getTemplateContents(this.app, path),
-      resolvePath: (filename, cfg) => getNoteCreationPath(this.app, filename, cfg),
-      createNote: (path, contents) => vault.create(path, contents),
-      findNearestBeforePath: (date) => this.cache.findNearestBefore("day", date)?.filePath ?? null,
-      readSource: async (path) => {
-        const file = vault.getAbstractFileByPath(path);
-        return file instanceof TFile ? vault.cachedRead(file) : null;
-      },
-      modifySource: async (path, contents) => {
-        const file = vault.getAbstractFileByPath(path);
-        if (file instanceof TFile) await vault.modify(file, contents);
-      },
-    };
+  private noteCreationPorts() {
+    return obsidianNoteCreationPorts(this.app, this.cache);
   }
 
-  public async createPeriodicNote(
-    granularity: Granularity,
-    date: Moment
-  ): Promise<TFile> {
+  public async getOrCreatePeriodicNote(granularity: Granularity, date: Moment): Promise<TFile> {
     const s = get(this.settings);
-    const cfg = configFor(s, granularity);
-    const rollover =
-      s.rolloverUnfinishedTasks && s.rolloverHeading ? { heading: s.rolloverHeading } : null;
-
-    return createNoteFromTemplate(this.noteCreationPorts(), granularity, date, cfg, rollover);
-  }
-
-  public getPeriodicNote(granularity: Granularity, date: Moment): TFile | null {
-    return this.cache.getPeriodicNote(granularity, date);
-  }
-
-  public getPeriodicNotes(
-    granularity: Granularity,
-    date: Moment,
-    includeFinerGranularities = false
-  ): PeriodicNoteCachedMetadata[] {
-    return this.cache.getPeriodicNotes(granularity, date, includeFinerGranularities);
-  }
-
-  public isPeriodic(filePath: string, granularity?: Granularity): boolean {
-    return this.cache.isPeriodic(filePath, granularity);
-  }
-
-  public findAdjacent(
-    filePath: string,
-    direction: "forwards" | "backwards"
-  ): PeriodicNoteCachedMetadata | null {
-    return this.cache.findAdjacent(filePath, direction);
-  }
-
-  public findInCache(filePath: string): PeriodicNoteCachedMetadata | null {
-    return this.cache.find(filePath);
+    return getOrCreateNote(
+      this.noteCreationPorts(),
+      granularity,
+      date,
+      configFor(s, granularity),
+      s
+    );
   }
 
   public async openPeriodicNote(
@@ -257,10 +221,7 @@ export default class PeriodicNotesPlugin extends Plugin implements IPeriodicNote
   ): Promise<void> {
     const { inNewSplit = false } = opts ?? {};
     const { workspace } = this.app;
-    let file = this.cache.getPeriodicNote(granularity, date);
-    if (!file) {
-      file = await this.createPeriodicNote(granularity, date);
-    }
+    const file = await this.getOrCreatePeriodicNote(granularity, date);
 
     const leaf = inNewSplit ? workspace.getLeaf("split") : workspace.getLeaf(false);
     await leaf.openFile(file, { active: true });
@@ -273,9 +234,5 @@ export default class PeriodicNotesPlugin extends Plugin implements IPeriodicNote
 
   public getActiveConfig(granularity: Granularity): PeriodicConfig {
     return configFor(get(this.settings), granularity);
-  }
-
-  public getFormat(granularity: Granularity): string {
-    return configFor(get(this.settings), granularity).format;
   }
 }

@@ -12,7 +12,6 @@ import GranularitySection from "./pages/GranularitySection.svelte";
 import { getLocaleOptions, getWeekStartOptions } from "./utils";
 
 export type { ISettings } from "src/types";
-export { DEFAULT_SETTINGS, DEFAULT_PERIODIC_CONFIG } from "./defaults";
 
 export class PeriodicNotesSettingsTab extends PluginSettingTab {
   private view: ReturnType<typeof mount> | null = null;
