@@ -1,7 +1,8 @@
 import moment from "moment";
 import { describe, expect, it } from "vitest";
 
-import { decide, shouldSeedEmptyNote, type MatchInput } from "./cacheDecision";
+import { decide, resolveFile, shouldSeedEmptyNote, type MatchInput } from "./cacheDecision";
+import { PeriodicNoteIndex } from "./periodicNoteIndex";
 import { DEFAULT_SETTINGS } from "./settings/defaults";
 import type { ISettings, PeriodicNoteCachedMetadata } from "./types";
 
@@ -131,6 +132,37 @@ describe("decide", () => {
     expect(match?.matchData.matchType).toBe("frontmatter");
   });
 
+  it("does not match a filename in a sibling folder that shares the prefix", () => {
+    const settings = settingsWith({
+      day: { enabled: true, openAtStartup: false, format: "YYYY-MM-DD", folder: "Daily" },
+    });
+
+    expect(decide(input({ path: "Daily2/2024-01-15.md", basename: "2024-01-15" }), settings, ["day"])?.matchData.exact).not.toBe(true);
+    expect(decide(input({ path: "Daily/2024-01-15.md", basename: "2024-01-15" }), settings, ["day"])?.matchData.exact).toBe(true);
+  });
+
+  it("treats '/' and a trailing slash as valid folder spellings", () => {
+    const root = settingsWith({
+      day: { enabled: true, openAtStartup: false, format: "YYYY-MM-DD", folder: "/" },
+    });
+    const slash = settingsWith({
+      day: { enabled: true, openAtStartup: false, format: "YYYY-MM-DD", folder: "Daily/" },
+    });
+
+    expect(decide(input({ path: "2024-01-15.md", basename: "2024-01-15" }), root, ["day"])?.matchData.exact).toBe(true);
+    expect(decide(input({ path: "Daily/2024-01-15.md", basename: "2024-01-15" }), slash, ["day"])?.matchData.exact).toBe(true);
+  });
+
+  it("ignores frontmatter in a sibling folder that shares the prefix", () => {
+    const settings = settingsWith({
+      day: { enabled: true, openAtStartup: false, format: "YYYY-MM-DD", folder: "daily" },
+    });
+
+    expect(
+      decide(input({ path: "daily2/x.md", basename: "x", frontmatter: { day: "2024-01-15" } }), settings, ["day"])
+    ).toBeNull();
+  });
+
   it("ignores frontmatter for a granularity whose folder does not contain the file", () => {
     const match = decide(
       input({ path: "elsewhere/note.md", basename: "note", frontmatter: { day: "2024-01-15" } }),
@@ -200,5 +232,73 @@ describe("shouldSeedEmptyNote", () => {
       matchData: { exact: true, matchType: "frontmatter" },
     };
     expect(shouldSeedEmptyNote("create", { stat: { size: 0 } }, frontmatterMatch)).toBe(false);
+  });
+});
+
+describe("resolveFile", () => {
+  const dayOn = {
+    enabled: true,
+    openAtStartup: false,
+    format: "YYYY-MM-DD",
+    folder: "",
+  };
+  const settings = settingsWith({ day: dayOn });
+  const daily = (overrides: Partial<MatchInput> = {}) =>
+    input({ path: "2024-01-15.md", basename: "2024-01-15", ...overrides });
+
+  it("sets the entry for a match and reports the change", () => {
+    const index = new PeriodicNoteIndex();
+    const r = resolveFile(index, daily({ size: 5 }), settings, "initialize");
+
+    expect(r.match?.filePath).toBe("2024-01-15.md");
+    expect(r.changed).toBe(true);
+    expect(index.find("2024-01-15.md")).not.toBeNull();
+  });
+
+  it("reports no change when the same entry is resolved again", () => {
+    const index = new PeriodicNoteIndex();
+    resolveFile(index, daily({ size: 5 }), settings, "initialize");
+
+    expect(resolveFile(index, daily({ size: 5 }), settings, "metadata").changed).toBe(false);
+  });
+
+  it("drops the entry when the file no longer matches", () => {
+    const index = new PeriodicNoteIndex();
+    resolveFile(index, daily({ size: 5 }), settings, "initialize");
+
+    const r = resolveFile(index, input({ path: "2024-01-15.md", basename: "notes" }), settings, "rename");
+
+    expect(r.match).toBeNull();
+    expect(index.find("2024-01-15.md")).toBeNull();
+  });
+
+  it("seeds a blank strict note on create, even when the entry was already indexed", () => {
+    const index = new PeriodicNoteIndex();
+    resolveFile(index, daily({ size: 0 }), settings, "initialize");
+
+    const r = resolveFile(index, daily({ size: 0 }), settings, "create");
+
+    expect(r.changed).toBe(false);
+    expect(r.seed).toBe(true);
+  });
+
+  it("never seeds on rename, initialize or metadata, or a non-empty or loose file", () => {
+    for (const reason of ["rename", "initialize", "metadata"] as const) {
+      expect(resolveFile(new PeriodicNoteIndex(), daily({ size: 0 }), settings, reason).seed).toBe(false);
+    }
+    expect(resolveFile(new PeriodicNoteIndex(), daily({ size: 5 }), settings, "create").seed).toBe(false);
+    const loose = input({ path: "Meeting 2024-01-15.md", basename: "Meeting 2024-01-15", size: 0 });
+    expect(resolveFile(new PeriodicNoteIndex(), loose, settings, "create").seed).toBe(false);
+  });
+
+  it("leaves the index alone when no granularity is enabled", () => {
+    const index = new PeriodicNoteIndex();
+    resolveFile(index, daily({ size: 5 }), settings, "initialize");
+    const allOff = settingsWith({ day: { ...dayOn, enabled: false } });
+
+    const r = resolveFile(index, input({ path: "2024-01-15.md", basename: "notes" }), allOff, "rename");
+
+    expect(r).toEqual({ match: null, changed: false, seed: false });
+    expect(index.find("2024-01-15.md")).not.toBeNull();
   });
 });

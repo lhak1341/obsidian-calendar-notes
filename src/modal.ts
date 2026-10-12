@@ -1,6 +1,7 @@
 import { Menu, type Point } from "obsidian";
+import { get } from "svelte/store";
 
-import { displayConfigs } from "./commands";
+import { activeGranularities, displayConfigs, iconId } from "./granularity";
 import type { INoteOps } from "./types";
 
 export function showFileMenu(
@@ -9,12 +10,12 @@ export function showFileMenu(
 ): void {
   const contextMenu = new Menu();
 
-  plugin.getActiveGranularities().forEach((granularity) => {
+  activeGranularities(get(plugin.settings)).forEach((granularity) => {
     const config = displayConfigs[granularity];
     contextMenu.addItem((item) =>
       item
         .setTitle(config.labelOpenPresent)
-        .setIcon(`calendar-${granularity}`)
+        .setIcon(iconId(granularity))
         .onClick(() => {
           plugin.openPeriodicNote(granularity, window.moment());
         })

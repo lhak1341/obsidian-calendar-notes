@@ -10,7 +10,9 @@ import {
 } from "obsidian";
 import { get, type Readable } from "svelte/store";
 
-import { decide, shouldSeedEmptyNote, type MatchInput, type ResolveReason } from "./cacheDecision";
+import { resolveFile, type MatchInput, type ResolveReason } from "./cacheDecision";
+import { folderLookupPath } from "./folderRule";
+import { activeGranularities } from "./granularity";
 import { PeriodicNoteIndex } from "./periodicNoteIndex";
 import {
   granularities,
@@ -42,9 +44,6 @@ export class PeriodicNotesCache extends Component implements INoteIndex {
       this.registerEvent(
         this.app.metadataCache.on("changed", this.resolveChangedMetadata, this)
       );
-      this.registerEvent(
-        this.app.workspace.on("periodic-notes:settings-updated", this.reset, this)
-      );
     });
   }
 
@@ -66,10 +65,10 @@ export class PeriodicNotesCache extends Component implements INoteIndex {
 
   public initialize(): void {
     const settings = get(this.settingsStore);
-    const activeGranularities = granularities.filter((g) => settings[g]?.enabled);
-    for (const granularity of activeGranularities) {
+    const active = activeGranularities(settings);
+    for (const granularity of active) {
       const config = settings[granularity] as PeriodicConfig;
-      const rootFolder = this.app.vault.getAbstractFileByPath(config.folder || "/");
+      const rootFolder = this.app.vault.getAbstractFileByPath(folderLookupPath(config.folder));
       if (!(rootFolder instanceof TFolder)) continue;
 
       this.recurseChildren(rootFolder, (file) => this.update(file, "initialize"));
@@ -114,11 +113,8 @@ export class PeriodicNotesCache extends Component implements INoteIndex {
     reason: ResolveReason,
     frontmatter: MatchInput["frontmatter"] = this.frontmatterOf(file)
   ): void {
-    const settings = get(this.settingsStore);
-    const activeGranularities = granularities.filter((g) => settings[g]?.enabled);
-    if (activeGranularities.length === 0) return;
-
-    const match = decide(
+    const { match, changed, seed } = resolveFile(
+      this.index,
       {
         path: file.path,
         basename: file.basename,
@@ -126,21 +122,13 @@ export class PeriodicNotesCache extends Component implements INoteIndex {
         size: file.stat.size,
         frontmatter,
       },
-      settings,
-      activeGranularities
+      get(this.settingsStore),
+      reason
     );
-    if (!match) {
-      this.index.remove(file.path);
-      return;
-    }
+    if (!match) return;
 
-    if (this.index.set(match)) {
-      this.app.workspace.trigger("periodic-notes:resolve", match.granularity, file);
-    }
-
-    if (shouldSeedEmptyNote(reason, file, match)) {
-      this.app.workspace.trigger("periodic-notes:empty-note-created", file, match);
-    }
+    if (changed) this.app.workspace.trigger("periodic-notes:resolve", match.granularity, file);
+    if (seed) this.app.workspace.trigger("periodic-notes:empty-note-created", file, match);
   }
 
   public getPeriodicNote(granularity: Granularity, targetDate: Moment): TFile | null {

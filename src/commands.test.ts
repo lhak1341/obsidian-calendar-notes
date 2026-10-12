@@ -135,6 +135,17 @@ describe("jump to closest", () => {
     expect(plugin.cache.findAdjacent).not.toHaveBeenCalled();
   });
 
+  it("does nothing when the active file is only a loose match", async () => {
+    const loose = { ...meta("day", "2024-03-15"), matchData: { exact: false, matchType: "filename" as const } };
+    const plugin = makePlugin({ found: loose });
+    const command = byId(commandsFor(makeApp("Meeting 2024-03-15.md"), plugin, "day"), "next-daily-note");
+
+    command.checkCallback?.(false);
+    await Promise.resolve();
+
+    expect(plugin.cache.findAdjacent).not.toHaveBeenCalled();
+  });
+
   it("looks up the adjacent note in the requested direction", async () => {
     const plugin = makePlugin({ found: meta("day", "2024-03-15") });
     const app = {

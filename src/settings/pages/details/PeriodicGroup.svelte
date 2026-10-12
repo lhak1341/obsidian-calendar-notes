@@ -3,7 +3,7 @@
   import type { Writable } from "svelte/store";
   import writableDerived from "svelte-writable-derived";
 
-  import { displayConfigs } from "src/commands";
+  import { displayConfigs } from "src/granularity";
   import NoteFormatSetting from "src/settings/components/NoteFormatSetting.svelte";
   import NoteTemplateSetting from "src/settings/components/NoteTemplateSetting.svelte";
   import NoteFolderSetting from "src/settings/components/NoteFolderSetting.svelte";

@@ -27,3 +27,7 @@ Repo-specific gotchas below.
   `periodic-notes:empty-note-created` event (-> `seedNoteFromTemplate`). Hook
   creation-time behavior (template, rollover, write order) there, not in `main.ts`.
   The Obsidian side of the ports is `src/obsidianNoteCreationPorts.ts` (forwards only).
+- The settings UI edits the store's settings object in place (`writableDerived` in
+  `PeriodicGroup.svelte`), so never keep a reference as "previous settings" — compare a
+  fingerprint or clone (`createSettingsEffectsTracker`). Live-check settings logic with
+  `p.settings.update(s => { s.day.folder = "x"; return s })`; spread-copies hide the bug.

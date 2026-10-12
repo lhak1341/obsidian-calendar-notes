@@ -2,6 +2,7 @@
   import type { Moment } from "moment";
   import type { TFile } from "obsidian";
   import { onDestroy } from "svelte";
+  import { isMetaPressed } from "src/utils";
 
   import { createDotScheduler, type DotCell } from "./dotScheduler";
   import type { CalendarDot, GetDots } from "./types";
@@ -112,10 +113,6 @@
   const todayDisplayStr = today.calendar().split(/\d|\s/)[0];
 
   // ── Helpers ────────────────────────────────────────────────────────────────
-  function isMeta(e: MouseEvent): boolean {
-    return navigator.appVersion.includes("Mac") ? e.metaKey : e.ctrlKey;
-  }
-
   function prevMonth() {
     displayedMonth = displayedMonth.clone().subtract(1, "month");
   }
@@ -128,6 +125,18 @@
     displayedMonth = today.clone();
   }
 </script>
+
+{#snippet dotList(dots: CalendarDot[])}
+  <div class="dot-container">
+    {#each dots as dot}
+      {#if dot.isFilled}
+        <svg class="dot filled" viewBox="0 0 6 6" xmlns="http://www.w3.org/2000/svg"><circle cx="3" cy="3" r="2" /></svg>
+      {:else}
+        <svg class="hollow" viewBox="0 0 6 6" xmlns="http://www.w3.org/2000/svg"><circle cx="3" cy="3" r="2" /></svg>
+      {/if}
+    {/each}
+  </div>
+{/snippet}
 
 <div id="calendar-container" class="container">
   <!-- Navigation -->
@@ -176,7 +185,7 @@
               <div
                 class="week-num"
                 class:active={selectedId === weekUID(weekDate)}
-                onclick={(e) => onClickWeek?.(weekDate.clone().weekday(0), isMeta(e))}
+                onclick={(e) => onClickWeek?.(weekDate.clone().weekday(0), isMetaPressed(e))}
                 oncontextmenu={(e) => { e.preventDefault(); onContextMenuWeek?.(weekDate, e); }}
                 onpointerenter={(e) => onHoverWeek?.(weekDate, e.target!)}
                 role="button"
@@ -184,15 +193,7 @@
                 onkeydown={(e) => e.key === "Enter" && onClickWeek?.(weekDate.clone().weekday(0), false)}
               >
                 W{String(week.weekNum).padStart(2, "0")}
-                <div class="dot-container">
-                  {#each wDots as dot}
-                    {#if dot.isFilled}
-                      <svg class="dot filled" viewBox="0 0 6 6" xmlns="http://www.w3.org/2000/svg"><circle cx="3" cy="3" r="2" /></svg>
-                    {:else}
-                      <svg class="hollow" viewBox="0 0 6 6" xmlns="http://www.w3.org/2000/svg"><circle cx="3" cy="3" r="2" /></svg>
-                    {/if}
-                  {/each}
-                </div>
+                {@render dotList(wDots)}
               </div>
             </td>
           {/if}
@@ -206,7 +207,7 @@
                 class:today={date.isSame(today, "day")}
                 class:active={selectedId === dayUID(date)}
                 class:adjacent-month={!date.isSame(displayedMonth, "month")}
-                onclick={(e) => onClickDay?.(date, isMeta(e))}
+                onclick={(e) => onClickDay?.(date, isMetaPressed(e))}
                 oncontextmenu={(e) => { e.preventDefault(); onContextMenuDay?.(date, e); }}
                 onpointerenter={(e) => onHoverDay?.(date, e.target!)}
                 role="button"
@@ -214,15 +215,7 @@
                 onkeydown={(e) => e.key === "Enter" && onClickDay?.(date, false)}
               >
                 {date.format("D")}
-                <div class="dot-container">
-                  {#each dDots as dot}
-                    {#if dot.isFilled}
-                      <svg class="dot filled" viewBox="0 0 6 6" xmlns="http://www.w3.org/2000/svg"><circle cx="3" cy="3" r="2" /></svg>
-                    {:else}
-                      <svg class="hollow" viewBox="0 0 6 6" xmlns="http://www.w3.org/2000/svg"><circle cx="3" cy="3" r="2" /></svg>
-                    {/if}
-                  {/each}
-                </div>
+                {@render dotList(dDots)}
               </div>
             </td>
           {/each}

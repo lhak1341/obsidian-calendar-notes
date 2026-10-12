@@ -87,8 +87,6 @@ export interface INoteOps {
 
   openPeriodicNote(granularity: Granularity, date: Moment, opts?: IOpenOpts): Promise<void>;
   getOrCreatePeriodicNote(granularity: Granularity, date: Moment): Promise<TFile>;
-  getActiveGranularities(): Granularity[];
-  getActiveConfig(granularity: Granularity): PeriodicConfig;
 }
 
 // Queries over which vault files are periodic notes. PeriodicNotesCache implements it.

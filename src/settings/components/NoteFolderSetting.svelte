@@ -8,7 +8,7 @@
   import { validateFolder } from "../validation";
   import { useFieldValidation } from "./useFieldValidation";
   import type { Readable } from "svelte/store";
-  import { displayConfigs } from "src/commands";
+  import { displayConfigs } from "src/granularity";
 
   export let config: Readable<PeriodicConfig>;
   export let app: App;

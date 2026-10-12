@@ -5,7 +5,7 @@
 
   import type { Granularity, ISettings } from "src/types";
   import { granularities } from "src/types";
-  import { displayConfigs } from "src/commands";
+  import { displayConfigs } from "src/granularity";
 
   import PeriodicGroup from "./details/PeriodicGroup.svelte";
 

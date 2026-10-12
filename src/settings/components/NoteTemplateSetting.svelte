@@ -9,7 +9,7 @@
 
   import { validateTemplate } from "../validation";
   import { useFieldValidation } from "./useFieldValidation";
-  import { displayConfigs } from "src/commands";
+  import { displayConfigs } from "src/granularity";
 
   export let app: App;
   export let granularity: Granularity;

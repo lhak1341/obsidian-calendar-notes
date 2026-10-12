@@ -1,7 +1,10 @@
 import { type NLDatesPlugin, setIcon, App, SuggestModal, TFile } from "obsidian";
+import { get } from "svelte/store";
 
+import { configFor } from "src/calendarSet";
 import { DEFAULT_FORMAT } from "src/constants";
 import { generateDateSuggestions, type DateNavigationItem } from "src/dateSuggestions";
+import { activeGranularities, iconId } from "src/granularity";
 import { isMetaPressed, join } from "src/utils";
 
 import type { IHasNoteIndex, INoteOps } from "../types";
@@ -56,9 +59,9 @@ export class NLDNavigator extends SuggestModal<DateNavigationItem> {
   getSuggestions(query: string): DateNavigationItem[] {
     return generateDateSuggestions(
       query,
-      this.plugin.getActiveGranularities(),
+      activeGranularities(get(this.plugin.settings)),
       (dateStr) => this.nlDatesPlugin.parseDate(dateStr),
-      this.plugin.getActiveConfig("week").format
+      configFor(get(this.plugin.settings), "week").format
     );
   }
 
@@ -70,8 +73,8 @@ export class NLDNavigator extends SuggestModal<DateNavigationItem> {
     const periodicNote = this.plugin.cache.getPeriodicNote(value.granularity, value.date);
 
     if (!periodicNote) {
-      const format = this.plugin.getActiveConfig(value.granularity).format;
-      const folder = this.plugin.getActiveConfig(value.granularity).folder || "/";
+      const { format, folder: configuredFolder } = configFor(get(this.plugin.settings), value.granularity);
+      const folder = configuredFolder || "/";
       el.setText(value.label);
       el.createSpan({ cls: "suggestion-flair", prepend: true }, (el) => {
         setIcon(el, "add-note-glyph");
@@ -92,7 +95,7 @@ export class NLDNavigator extends SuggestModal<DateNavigationItem> {
     el.setText(value.label);
     el.createDiv({ cls: "suggestion-note", text: filePath });
     el.createSpan({ cls: "suggestion-flair", prepend: true }, (el) => {
-      setIcon(el, `calendar-${value.granularity}`);
+      setIcon(el, iconId(value.granularity));
     });
     if (numRelatedNotes > 0) {
       el.createSpan({ cls: "suggestion-badge", text: `+${numRelatedNotes}` });
@@ -183,7 +186,7 @@ class RelatedFilesSwitcher extends SuggestModal<DateNavigationItem> {
       text: value.date.format(DEFAULT_FORMAT[value.granularity]),
     });
     el.createSpan({ cls: "suggestion-flair", prepend: true }, (el) => {
-      setIcon(el, `calendar-${value.granularity}`);
+      setIcon(el, iconId(value.granularity));
     });
   }
 

@@ -1,10 +1,11 @@
 <script lang="ts">
   import { DEFAULT_FORMAT } from "src/constants";
   import type { Granularity, PeriodicConfig } from "src/types";
-  import { validateFormat, validateFormatComplexity } from "../validation";
+  import { validateFormatComplexity } from "src/formatRules";
+  import { validateFormat } from "../validation";
   import { useFieldValidation } from "./useFieldValidation";
   import type { Readable } from "svelte/store";
-  import { displayConfigs } from "src/commands";
+  import { displayConfigs } from "src/granularity";
 
   export let granularity: Granularity;
   export let config: Readable<PeriodicConfig>;

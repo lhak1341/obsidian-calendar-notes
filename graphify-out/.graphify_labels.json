@@ -78,5 +78,8 @@
   "76": "moment",
   "77": "obsidian",
   "78": "svelte",
-  "79": "svelte-writable-derived"
+  "79": "svelte-writable-derived",
+  "80": "obsidianNoteCreationPorts.ts",
+  "81": "commands.ts",
+  "82": "CONTEXT.md"
 }

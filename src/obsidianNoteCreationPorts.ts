@@ -2,8 +2,8 @@ import { normalizePath, Notice, TFile, type App } from "obsidian";
 
 import type { PeriodicNotesCache } from "./cache";
 import type { NoteCreationPorts } from "./noteCreation";
+import { noteFilePath, parentFolders } from "./notePath";
 import type { PeriodicConfig } from "./types";
-import { join } from "./utils";
 
 async function getTemplateContents(app: App, templatePath: string | undefined): Promise<string> {
   const { metadataCache, vault } = app;
@@ -23,12 +23,8 @@ async function getTemplateContents(app: App, templatePath: string | undefined): 
 }
 
 async function ensureFolderExists(app: App, path: string): Promise<void> {
-  const dirs = path.replace(/\\/g, "/").split("/");
-  dirs.pop(); // remove basename
-
-  for (let i = 1; i <= dirs.length; i++) {
-    const dir = join(...dirs.slice(0, i));
-    if (dir && !app.vault.getAbstractFileByPath(dir)) {
+  for (const dir of parentFolders(path)) {
+    if (!app.vault.getAbstractFileByPath(dir)) {
       await app.vault.createFolder(dir);
     }
   }
@@ -39,10 +35,7 @@ async function getNoteCreationPath(
   filename: string,
   periodicConfig: PeriodicConfig
 ): Promise<string> {
-  const directory = periodicConfig.folder ?? "";
-  const filenameWithExt = !filename.endsWith(".md") ? `${filename}.md` : filename;
-
-  const path = normalizePath(join(directory, filenameWithExt));
+  const path = normalizePath(noteFilePath(periodicConfig.folder ?? "", filename));
   await ensureFolderExists(app, path);
   return path;
 }

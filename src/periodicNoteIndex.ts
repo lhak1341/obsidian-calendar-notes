@@ -106,25 +106,28 @@ export class PeriodicNoteIndex {
     return matches;
   }
 
+  // Exact matches only, for the active note and its neighbours: a loose
+  // filename guess is not a periodic note you can step from or to.
   findAdjacent(
     path: string,
     direction: "forwards" | "backwards"
   ): PeriodicNoteCachedMetadata | null {
     const current = this.byPath.get(path);
-    if (!current) return null;
+    if (!current?.matchData.exact) return null;
 
     const sorted = [...this.byPath.values()]
-      .filter((m) => m.granularity === current.granularity)
+      .filter((m) => m.matchData.exact && m.granularity === current.granularity)
       .sort((a, b) => (a.canonicalDateStr < b.canonicalDateStr ? -1 : a.canonicalDateStr > b.canonicalDateStr ? 1 : 0));
     const index = sorted.findIndex((m) => m.filePath === path);
     return sorted[index + (direction === "forwards" ? 1 : -1)] ?? null;
   }
 
-  // Nearest existing note strictly before `date`, regardless of gaps.
+  // Nearest existing exact note strictly before `date`, regardless of gaps.
+  // Loose guesses are skipped: rollover rewrites the file this returns.
   findNearestBefore(granularity: Granularity, date: Moment): PeriodicNoteCachedMetadata | null {
     let nearest: PeriodicNoteCachedMetadata | null = null;
     for (const entry of this.byPath.values()) {
-      if (entry.granularity !== granularity || !entry.date.isBefore(date, granularity)) continue;
+      if (!entry.matchData.exact || entry.granularity !== granularity || !entry.date.isBefore(date, granularity)) continue;
       if (!nearest || entry.canonicalDateStr >= nearest.canonicalDateStr) nearest = entry;
     }
     return nearest;

@@ -1,6 +1,7 @@
 import moment from "moment";
 import { describe, expect, it, vi } from "vitest";
 
+import { decide } from "./cacheDecision";
 import {
   createNoteFromTemplate,
   getOrCreateNote,
@@ -8,6 +9,8 @@ import {
   type NoteCreationPorts,
   type RolloverSettings,
 } from "./noteCreation";
+import { PeriodicNoteIndex } from "./periodicNoteIndex";
+import { DEFAULT_SETTINGS } from "./settings/defaults";
 import type { ResolvedPeriodicConfig } from "./types";
 
 function makeCfg(overrides: Partial<ResolvedPeriodicConfig> = {}): ResolvedPeriodicConfig {
@@ -254,5 +257,40 @@ describe("seedNoteFromTemplate", () => {
     await seedNoteFromTemplate(ports, "w.md", "w", "week", date, makeCfg(), NO_ROLLOVER);
 
     expect(date.format("YYYY-MM-DD")).toBe("2026-07-05");
+  });
+});
+
+describe("rollover source with real decide and index", () => {
+  it("never rolls over from, or rewrites, a loose filename match", async () => {
+    const settings = {
+      ...DEFAULT_SETTINGS,
+      day: { enabled: true, openAtStartup: false, format: "YYYY-MM-DD", folder: "" },
+    };
+    const index = new PeriodicNoteIndex();
+    for (const basename of ["2026-07-01", "Meeting 2026-07-04"]) {
+      const match = decide(
+        { path: `${basename}.md`, basename, extension: "md", size: 10, frontmatter: {} },
+        settings,
+        ["day"]
+      );
+      if (match) index.set(match);
+    }
+    expect(index.find("Meeting 2026-07-04.md")?.matchData.exact).toBe(false);
+
+    const sources: Record<string, string> = {
+      "2026-07-01.md": "# Plan\n- [ ] Real task",
+      "Meeting 2026-07-04.md": "# Plan\n- [ ] Not a daily task",
+    };
+    const ports = makePorts({
+      findNearestBeforePath: (date) => index.findNearestBefore("day", date)?.filePath ?? null,
+      readSource: vi.fn(async (path: string) => sources[path] ?? null),
+      readTemplate: vi.fn().mockResolvedValue("# Plan\n"),
+    });
+
+    await createNoteFromTemplate(ports, "day", moment("2026-07-05"), makeCfg(), ROLLOVER);
+
+    expect(ports.modifySource).toHaveBeenCalledTimes(1);
+    expect(ports.modifySource).toHaveBeenCalledWith("2026-07-01.md", "# Plan");
+    expect(vi.mocked(ports.createNote).mock.calls[0][1]).toContain("Real task");
   });
 });

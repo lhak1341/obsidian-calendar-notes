@@ -1,7 +1,7 @@
 import type { Moment } from "moment";
 import type { NLDResult } from "obsidian";
 
-import { isIsoFormat } from "./calendarSet";
+import { isIsoFormat } from "./formatRules";
 import type { Granularity, MatchType } from "./types";
 import { getRelativeDate } from "./utils";
 

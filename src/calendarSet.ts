@@ -1,6 +1,6 @@
 import { DEFAULT_FORMAT } from "./constants";
+import { isIsoFormat, splitFormatSegments } from "./formatRules";
 import { DEFAULT_PERIODIC_CONFIG } from "./settings/defaults";
-import { removeEscapedCharacters, splitFormatSegments } from "./settings/validation";
 import type {
   Granularity,
   ISettings,
@@ -37,9 +37,4 @@ export function configFor(
     possibleFormats,
     isIso: isIsoFormat(format),
   };
-}
-
-export function isIsoFormat(format: string): boolean {
-  const cleanFormat = removeEscapedCharacters(format);
-  return /w{1,2}/.test(cleanFormat);
 }

@@ -1,42 +1,9 @@
 import { type Command, App, TFile, Notice } from "obsidian";
 
+import { displayConfigs } from "./granularity";
 import type { Granularity, IHasNoteIndex, INoteOps } from "./types";
 
 type CommandPlugin = INoteOps & IHasNoteIndex;
-
-interface IDisplayConfig {
-  periodicity: string;
-  relativeUnit: string;
-  labelOpenPresent: string;
-}
-
-export const displayConfigs: Record<Granularity, IDisplayConfig> = {
-  day: {
-    periodicity: "daily",
-    relativeUnit: "today",
-    labelOpenPresent: "Open today's daily note",
-  },
-  week: {
-    periodicity: "weekly",
-    relativeUnit: "this week",
-    labelOpenPresent: "Open this week's note",
-  },
-  month: {
-    periodicity: "monthly",
-    relativeUnit: "this month",
-    labelOpenPresent: "Open this month's note",
-  },
-  quarter: {
-    periodicity: "quarterly",
-    relativeUnit: "this quarter",
-    labelOpenPresent: "Open this quarter's note",
-  },
-  year: {
-    periodicity: "yearly",
-    relativeUnit: "this year",
-    labelOpenPresent: "Open this year's note",
-  },
-};
 
 function commandIdsFor(granularity: Granularity) {
   const { periodicity } = displayConfigs[granularity];
@@ -63,7 +30,7 @@ async function jumpToAdjacentNote(
   const activeFile = app.workspace.getActiveFile();
   if (!activeFile) return;
   const activeFileMeta = plugin.cache.find(activeFile.path);
-  if (!activeFileMeta) return;
+  if (!activeFileMeta?.matchData.exact) return;
 
   const adjacentNoteMeta = plugin.cache.findAdjacent(activeFile.path, direction);
 

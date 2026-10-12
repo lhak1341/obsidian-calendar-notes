@@ -4,8 +4,10 @@
   import type { TFile } from "obsidian";
   import { onDestroy, onMount, untrack } from "svelte";
 
+  import { displayConfigs } from "src/granularity";
+  import { DEFAULT_SETTINGS } from "src/settings/defaults";
+  import type { Granularity, IPeriodicNoteController, ISettings } from "src/types";
   import { createWordCountSource } from "../sources/wordCount";
-  import type { IPeriodicNoteController, ISettings } from "src/types";
   import Calendar from "./Calendar.svelte";
   import { openWithConfirm } from "./openWithConfirm";
   import { dayUID, weekUID } from "./types";
@@ -18,16 +20,16 @@
   const p = untrack(() => plugin);
 
   // ── Settings ───────────────────────────────────────────────────────────────
-  let showWeekNums = $state(false);
-  let useJapaneseWeekdays = $state(false);
-  let wordsPerDot = $state(250);
-  let shouldConfirmBeforeCreate = $state(true);
+  let showWeekNums = $state(DEFAULT_SETTINGS.showWeekNums);
+  let useJapaneseWeekdays = $state(DEFAULT_SETTINGS.useJapaneseWeekdays);
+  let wordsPerDot = $state(DEFAULT_SETTINGS.wordsPerDot);
+  let shouldConfirmBeforeCreate = $state(DEFAULT_SETTINGS.shouldConfirmBeforeCreate);
 
   const unsubSettings = p.settings.subscribe((s: ISettings) => {
-    showWeekNums = s.showWeekNums ?? false;
-    useJapaneseWeekdays = s.useJapaneseWeekdays ?? false;
-    wordsPerDot = s.wordsPerDot ?? 250;
-    shouldConfirmBeforeCreate = s.shouldConfirmBeforeCreate ?? true;
+    showWeekNums = s.showWeekNums;
+    useJapaneseWeekdays = s.useJapaneseWeekdays;
+    wordsPerDot = s.wordsPerDot;
+    shouldConfirmBeforeCreate = s.shouldConfirmBeforeCreate;
   });
 
   // ── Dot source ─────────────────────────────────────────────────────────────
@@ -71,62 +73,34 @@
     syncSelectedId();
   });
 
-  // ── Note getters ───────────────────────────────────────────────────────────
-  function getNoteForDate(date: Moment): TFile | null {
-    return plugin.cache.getPeriodicNote("day", date);
+  // ── Calendar cells: day and week ───────────────────────────────────────────
+  type CellGranularity = Extract<Granularity, "day" | "week">;
+  const uidFor: Record<CellGranularity, (date: Moment) => string> = {
+    day: dayUID,
+    week: weekUID,
+  };
+
+  function getNote(granularity: CellGranularity, date: Moment): TFile | null {
+    return plugin.cache.getPeriodicNote(granularity, date);
   }
 
-  function getNoteForWeek(date: Moment): TFile | null {
-    return plugin.cache.getPeriodicNote("week", date);
+  async function handleClick(granularity: CellGranularity, date: Moment, inNewSplit: boolean) {
+    if (await openWithConfirm(granularity, date, plugin, shouldConfirmBeforeCreate, { inNewSplit }))
+      selectedId = uidFor[granularity](date);
   }
 
-  // ── Click handlers ─────────────────────────────────────────────────────────
-  async function handleClickDay(date: Moment, inNewSplit: boolean) {
-    if (await openWithConfirm("day", date, plugin, shouldConfirmBeforeCreate, { inNewSplit }))
-      selectedId = dayUID(date);
-  }
-
-  async function handleClickWeek(date: Moment, inNewSplit: boolean) {
-    if (await openWithConfirm("week", date, plugin, shouldConfirmBeforeCreate, { inNewSplit }))
-      selectedId = weekUID(date);
-  }
-
-  // ── Context menus ──────────────────────────────────────────────────────────
-  function handleContextMenuDay(date: Moment, event: MouseEvent) {
-    const note = plugin.cache.getPeriodicNote("day", date);
+  function handleContextMenu(granularity: CellGranularity, date: Moment, event: MouseEvent) {
+    const { periodicity } = displayConfigs[granularity];
+    const exists = !!getNote(granularity, date);
     const menu = new Menu();
-    if (note) {
-      menu.addItem((item) =>
-        item.setTitle("Open daily note").setIcon("file").onClick(() => {
-          plugin.openPeriodicNote("day", date);
+    menu.addItem((item) =>
+      item
+        .setTitle(`${exists ? "Open" : "Create"} ${periodicity} note`)
+        .setIcon(exists ? "file" : "file-plus")
+        .onClick(() => {
+          plugin.openPeriodicNote(granularity, date);
         })
-      );
-    } else {
-      menu.addItem((item) =>
-        item.setTitle("Create daily note").setIcon("file-plus").onClick(() => {
-          plugin.openPeriodicNote("day", date);
-        })
-      );
-    }
-    menu.showAtMouseEvent(event);
-  }
-
-  function handleContextMenuWeek(date: Moment, event: MouseEvent) {
-    const note = plugin.cache.getPeriodicNote("week", date);
-    const menu = new Menu();
-    if (note) {
-      menu.addItem((item) =>
-        item.setTitle("Open weekly note").setIcon("file").onClick(() => {
-          plugin.openPeriodicNote("week", date);
-        })
-      );
-    } else {
-      menu.addItem((item) =>
-        item.setTitle("Create weekly note").setIcon("file-plus").onClick(() => {
-          plugin.openPeriodicNote("week", date);
-        })
-      );
-    }
+    );
     menu.showAtMouseEvent(event);
   }
 </script>
@@ -137,10 +111,10 @@
   {showWeekNums}
   {useJapaneseWeekdays}
   {getDots}
-  {getNoteForDate}
-  {getNoteForWeek}
-  onClickDay={handleClickDay}
-  onClickWeek={handleClickWeek}
-  onContextMenuDay={handleContextMenuDay}
-  onContextMenuWeek={handleContextMenuWeek}
+  getNoteForDate={(date) => getNote("day", date)}
+  getNoteForWeek={(date) => getNote("week", date)}
+  onClickDay={(date, inNewSplit) => handleClick("day", date, inNewSplit)}
+  onClickWeek={(date, inNewSplit) => handleClick("week", date, inNewSplit)}
+  onContextMenuDay={(date, event) => handleContextMenu("day", date, event)}
+  onContextMenuWeek={(date, event) => handleContextMenu("week", date, event)}
 />

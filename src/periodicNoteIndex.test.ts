@@ -119,4 +119,19 @@ describe("PeriodicNoteIndex", () => {
       index.getPeriodicNotes("week", moment("2024-01-15"), true).map((m) => m.filePath).sort()
     ).toEqual(["day.md", "week.md"]);
   });
+
+  it("findNearestBefore and findAdjacent ignore loose matches, getPeriodicNotes keeps them", () => {
+    const index = new PeriodicNoteIndex();
+    const loose = { matchData: { exact: false, matchType: "filename" as const } };
+    index.set(entry("a.md", "2024-01-10"));
+    index.set(entry("Meeting 2024-01-12.md", "2024-01-12", loose));
+    index.set(entry("c.md", "2024-01-20"));
+
+    expect(index.findNearestBefore("day", moment("2024-01-15"))?.filePath).toBe("a.md");
+    expect(index.findAdjacent("a.md", "forwards")?.filePath).toBe("c.md");
+    expect(index.findAdjacent("Meeting 2024-01-12.md", "forwards")).toBeNull();
+    expect(index.getPeriodicNotes("day", moment("2024-01-12")).map((m) => m.filePath)).toEqual([
+      "Meeting 2024-01-12.md",
+    ]);
+  });
 });

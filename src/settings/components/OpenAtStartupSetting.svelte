@@ -2,7 +2,7 @@
   import type { Writable } from "svelte/store";
 
   import type { Granularity, PeriodicConfig } from "src/types";
-  import { displayConfigs } from "src/commands";
+  import { displayConfigs } from "src/granularity";
   import type { ISettings } from "..";
   import { clearStartupNote } from "../utils";
 

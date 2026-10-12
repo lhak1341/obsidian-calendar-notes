@@ -1,12 +1,13 @@
 import type { Moment } from "moment";
-import { addIcon, Plugin, type TFile } from "obsidian";
+import { addIcon, debounce, Notice, Plugin, type TFile } from "obsidian";
 import { get, writable } from "svelte/store";
 
 import { PeriodicNotesCache } from "./cache";
 import { VIEW_TYPE_CALENDAR } from "./calendar/constants";
 import { CalendarView } from "./calendar/view";
 import { configFor } from "./calendarSet";
-import { commandIds, displayConfigs, getCommands } from "./commands";
+import { commandIds, getCommands } from "./commands";
+import { activeGranularities, displayConfigs, iconId } from "./granularity";
 import {
   calendarDayIcon,
   calendarMonthIcon,
@@ -28,6 +29,7 @@ import {
   findStartupNoteConfig,
   hasLegacyDailyNoteSettings,
 } from "./settings/utils";
+import { createSettingsEffectsTracker } from "./settingsEffects";
 import { NLDNavigator } from "./switcher/navigator";
 import TimelineManager from "./timeline/manager";
 import {
@@ -35,7 +37,6 @@ import {
   type Granularity,
   type IOpenOpts,
   type IPeriodicNoteController,
-  type PeriodicConfig,
 } from "./types";
 import { isMetaPressed } from "./utils";
 
@@ -46,19 +47,24 @@ export default class PeriodicNotesPlugin extends Plugin implements IPeriodicNote
   public cache!: PeriodicNotesCache;
   private timelineManager!: TimelineManager;
   private settingsTab!: PeriodicNotesSettingsTab;
+  private settingsEffects = createSettingsEffectsTracker();
+  // A keystroke in a format or folder field changes the stored value each time;
+  // rebuilding the index waits until typing pauses.
+  private reindexSoon = debounce(() => this.cache?.reset(), 300, true);
 
   unload(): void {
+    this.reindexSoon.cancel();
     this.settingsTab?.hide();
     this.timelineManager?.cleanup();
     super.unload();
   }
 
   async onload(): Promise<void> {
-    addIcon("calendar-day", calendarDayIcon);
-    addIcon("calendar-week", calendarWeekIcon);
-    addIcon("calendar-month", calendarMonthIcon);
-    addIcon("calendar-quarter", calendarQuarterIcon);
-    addIcon("calendar-year", calendarYearIcon);
+    addIcon(iconId("day"), calendarDayIcon);
+    addIcon(iconId("week"), calendarWeekIcon);
+    addIcon(iconId("month"), calendarMonthIcon);
+    addIcon(iconId("quarter"), calendarQuarterIcon);
+    addIcon(iconId("year"), calendarYearIcon);
 
     this.registerView(VIEW_TYPE_CALENDAR, (leaf) => new CalendarView(leaf, this));
 
@@ -69,7 +75,7 @@ export default class PeriodicNotesPlugin extends Plugin implements IPeriodicNote
     this.registerEvent(
       this.app.workspace.on("periodic-notes:empty-note-created", (file, match) => {
         const s = get(this.settings);
-        return seedNoteFromTemplate(
+        seedNoteFromTemplate(
           this.noteCreationPorts(),
           file.path,
           file.basename,
@@ -77,7 +83,10 @@ export default class PeriodicNotesPlugin extends Plugin implements IPeriodicNote
           match.date,
           configFor(s, match.granularity),
           s
-        );
+        ).catch((error: unknown) => {
+          console.error("[Calendar Notes] could not apply the template to", file.path, error);
+          new Notice(`Calendar Notes: could not apply the template to ${file.basename}`);
+        });
       })
     );
 
@@ -129,12 +138,12 @@ export default class PeriodicNotesPlugin extends Plugin implements IPeriodicNote
   private configureRibbonIcons() {
     this.ribbonEl?.detach();
 
-    const activeGranularities = this.getActiveGranularities();
-    if (activeGranularities.length) {
-      const granularity = activeGranularities[0];
+    const enabled = activeGranularities(get(this.settings));
+    if (enabled.length) {
+      const granularity = enabled[0];
       const config = displayConfigs[granularity];
       this.ribbonEl = this.addRibbonIcon(
-        `calendar-${granularity}`,
+        iconId(granularity),
         config.labelOpenPresent,
         (e: MouseEvent) => {
           if (e.type !== "auxclick") {
@@ -167,7 +176,7 @@ export default class PeriodicNotesPlugin extends Plugin implements IPeriodicNote
       });
 
     // Register enabled commands
-    this.getActiveGranularities().forEach((granularity: Granularity) => {
+    activeGranularities(s).forEach((granularity: Granularity) => {
       getCommands(this.app, this, granularity).forEach(this.addCommand.bind(this));
     });
   }
@@ -178,9 +187,14 @@ export default class PeriodicNotesPlugin extends Plugin implements IPeriodicNote
   }
 
   private async onUpdateSettings(newSettings: ISettings): Promise<void> {
+    const effects = this.settingsEffects.next(newSettings);
+
     await this.saveData(newSettings);
-    this.configureCommands();
-    this.configureRibbonIcons();
+    if (effects.reconfigure) {
+      this.configureCommands();
+      this.configureRibbonIcons();
+    }
+    if (effects.reindex) this.reindexSoon();
 
     this.app.workspace.trigger("periodic-notes:settings-updated");
   }
@@ -225,14 +239,5 @@ export default class PeriodicNotesPlugin extends Plugin implements IPeriodicNote
 
     const leaf = inNewSplit ? workspace.getLeaf("split") : workspace.getLeaf(false);
     await leaf.openFile(file, { active: true });
-  }
-
-  public getActiveGranularities(): Granularity[] {
-    const s = get(this.settings);
-    return granularities.filter((g) => s[g]?.enabled);
-  }
-
-  public getActiveConfig(granularity: Granularity): PeriodicConfig {
-    return configFor(get(this.settings), granularity);
   }
 }
